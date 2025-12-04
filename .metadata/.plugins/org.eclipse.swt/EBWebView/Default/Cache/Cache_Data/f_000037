@@ -1,0 +1,1801 @@
+
+
+
+
+
+
+ 
+ <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Frameset//EN" "http://www.w3.org/TR/html4/frameset.dtd">
+<!--
+ ! Copyright (c) 2000, 2018 IBM Corporation and others.
+ !
+ ! This program and the accompanying materials 
+ ! are made available under the terms of the Eclipse Public License 2.0
+ ! which accompanies this distribution, and is available at
+ ! https://www.eclipse.org/legal/epl-2.0/
+ !
+ ! SPDX-License-Identifier: EPL-2.0
+ ! 
+ ! Contributors:
+ !     IBM Corporation - initial API and implementation
+ -->
+
+
+
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="-1">
+
+<title>Search Results</title>
+
+<style type="text/css">
+/*******************************************************************************
+ * Copyright (c) 2000, 2011 IBM Corporation and others.
+ *
+ * This program and the accompanying materials 
+ * are made available under the terms of the Eclipse Public License 2.0
+ * which accompanies this distribution, and is available at
+ * https://www.eclipse.org/legal/epl-2.0/
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ * 
+ * Contributors:
+ *     IBM Corporation - initial API and implementation
+ *******************************************************************************/
+
+body {
+    
+	color: CanvasText;
+	font: icon;
+	font-size: .875rem;
+	padding: 0px;
+	border: 0px;
+	margin-top: 5px;
+	margin-bottom: 8px;
+	margin-left: 5px;
+	margin-right: 5px;
+	cursor: default;
+}
+
+table {
+	font: icon;
+	font-size: .875rem;
+	width: 100%;
+	table-layout: fixed;
+}
+
+a {
+	text-decoration:none; 
+	padding:0px;
+}
+
+a:hover {
+	text-decoration:underline; 
+}
+
+.category {
+	font-weight: bold;
+	margin-top: 5px;
+	margin-bottom: 5px;
+}
+
+.sectiontitle {
+	background-color: ButtonFace;
+	font-weight:bold;
+	margin-top:7px;
+}
+
+.results .active { 
+	background:Highlight;
+	color:HighlightText;
+	width:100%;
+	height:100%;
+}
+
+.showall {
+    text-decoration:underline; 
+    color:#0066FF; 
+	cursor:pointer;
+}
+
+#menu {
+	position:absolute;
+	display:none;
+	background:ButtonFace;
+	border:2px outset;
+	padding:2px 0px;
+}
+
+.selectedMenuItem {
+	background:Highlight;
+	color:HighlightText;
+	padding-left:10px;
+	padding-right:10px;
+}
+
+.unselectedMenuItem {
+	background:ButtonFace;
+	color:CanvasText;
+	padding-left:10px;
+	padding-right:10px;
+}
+
+.icon {
+	width: 23px;
+	padding-left: 0px;
+}
+
+.description {
+	display: block;
+}
+.location {
+	display: block;
+	font-size:80%;
+	overflow:visible;
+	white-space:nowrap;
+}
+.location, .location a {
+	color:#006633;
+}
+.active .location, .active .location a {
+	color:HighlightText;
+}
+
+@media (prefers-color-scheme: dark) {
+	body { 
+		color: #f0f0f0; 
+		background: #3d3d3d;
+	}
+
+	#titleText,
+	#searchLabel,
+	#scopeLabel,
+	#scope,
+	a,
+	a.active
+	a.nolink:link, 
+	a.nolink:visited {
+		color:#ffffff;
+	}
+
+	.button a:hover, .buttonMenu a:hover { 
+		border-top:1px solid #3d3d3d; 
+		border-left:1px solid #3d3d3d; 
+		border-right:1px solid #3d3d3d; 
+		border-bottom:1px solid #3d3d3d;
+	}
+
+	table {
+		background:#3d3d3d;
+	}
+	.tab {
+		background:#7b7c7b
+	}
+
+	form {
+		background:#3d3d3d;
+	}
+	
+	.separator {
+
+	}
+	
+	input{
+		background:#a0a0a0;
+	}
+
+	.button a, .buttonMenu a { 
+		border:1px solid #3d3d3d;;
+	}
+	
+	/* darken images to add some comfort while reading in dark theme */
+	img {
+		opacity: .75;
+		transition: opacity .5s ease-in-out;
+	}
+	img:hover {
+		opacity: 1;
+	}
+
+	.location, .location a {
+		color:#00cc66;
+	}
+}
+
+</style>
+
+
+<base target="ContentViewFrame">
+<script type="text/javascript" src="utils.js"></script>
+<script type="text/javascript" src="list.js"></script>
+<script type="text/javascript" src="view.js"></script>
+<script type="text/javascript">	
+
+var cookiesRequired = "This\u0020feature\u0020requires\u0020cookies\u0020to\u0020be\u0020enabled\u0020in\u0020your\u0020browser\u002E";	
+var showCategories = false;
+var scope ="All\u0020topics";
+
+function refresh() { 
+	window.location.replace("searchView.jsp?searchWord\u003Djunit\u0026maxHits\u003D\u0035\u0030\u0030");
+}
+
+function isShowLocations() {
+	var value = getCookie("showLocations");
+	return value ? value == "true" : true;
+}
+
+function isShowDescriptions() {
+	var value = getCookie("showDescriptions");
+	return value ? value == "true" : true;
+}
+
+function setShowCategories(value) { 	    
+	parent.searchToolbarFrame.setButtonState("show_categories", value);
+	var searchWord = "junit";
+	    window.location="searchView.jsp?searchWord=" + encodeURIComponent(searchWord) 
+	       + "&showSearchCategories=" + value +
+	       "&scope=" + encodeURIComponent(scope);    
+}
+
+function setShowLocations(value) {
+	setCookie("showLocations", value);
+	var newValue = isShowLocations();
+	parent.searchToolbarFrame.setButtonState("show_locations", newValue);
+	if (value != newValue) {
+		alert(cookiesRequired);
+	} else {
+		setCSSRule(".location", "display", value ? "block" : "none");
+	}
+}
+
+function setShowDescriptions(value) {
+	setCookie("showDescriptions", value);
+	var newValue = isShowDescriptions();   	
+	parent.searchToolbarFrame.setButtonState("show_descriptions", newValue);
+	if (value != newValue) {
+	    alert(cookiesRequired);
+	} else { 
+	    setCSSRule(".description", "display", value ? "block" : "none");
+	}
+}
+
+function toggleShowCategories() {
+	setShowCategories(!showCategories);
+}
+
+function toggleShowLocations() {
+	setShowLocations(!isShowLocations());
+}
+
+function toggleShowDescriptions() {
+	setShowDescriptions(!isShowDescriptions());
+}
+
+function onShow() { 
+}
+</script>
+
+
+</head>
+
+<body dir="ltr">
+
+
+<p><b>44 matches in All topics&#58;</b>
+
+    &nbsp;<a class="showall" onclick="rescope();" >Change scope</a>
+
+</p>
+
+
+<table class="results" cellspacing='0'>
+
+
+
+<tr class='list' id='r0'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a0' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;reference&#47;preferences&#47;java&#47;ref&#45;preferences&#45;junit&#46;htm&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Java Development User Guide">
+
+
+
+        JUnit Preferences</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;1">Java Development User Guide</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_4">Reference</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_4_4">Preferences</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;reference&#47;preferences&#47;ref&#45;preferences&#45;java&#46;htm">Java</a></div></td></tr>
+<tr id='d0'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			The &#91;Opens the JUnit preference page&#93; Java &#62; JUnit preference page lets you configure the stack trace filter patterns for JUnit&#46; The patterns are used in the JUnit view to &#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r1'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a1' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;reference&#47;views&#47;ref&#45;view&#45;junit&#46;htm&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Java Development User Guide">
+
+
+
+        &#10;      JUnit View&#10;    </a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;1">Java Development User Guide</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_4">Reference</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;reference&#47;views&#47;ref&#45;viewsandeditors&#46;htm">Views</a></div></td></tr>
+<tr id='d1'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			The JUnit view shows you the JUnit test run progress and status&#44; and allows you to rerun tests&#46;&#10;&#9; JUnit View commands&#58; &#10;              Command
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r2'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a2' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;junit&#46;htm&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Java Development User Guide">
+
+
+
+        &#10;      Writing and running JUnit tests&#10;    </a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;1">Java Development User Guide</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_1">Getting started</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;BasicTutorial&#46;htm">Basic tutorial</a></div></td></tr>
+<tr id='d2'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			In this section&#44; you will be using the  JUnit  testing framework to write and run tests&#46; To&#10;      get started with JUnit you can refer to the  JUnit
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r3'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a3' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;3&#46;htm&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Java Development User Guide">
+
+
+
+        Creating your first Java project</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;1">Java Development User Guide</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_1">Getting started</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;BasicTutorial&#46;htm">Basic tutorial</a></div></td></tr>
+<tr id='d3'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			In this section&#44; you will create a new Java project&#46; You will be using JUnit as your example project&#46; JUnit is an open source unit testing framework for Java&#46; Getting the S&#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r4'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a4' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;4&#46;htm&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Java Development User Guide">
+
+
+
+        Browsing Java elements using the package explorer</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;1">Java Development User Guide</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_1">Getting started</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;BasicTutorial&#46;htm">Basic tutorial</a></div></td></tr>
+<tr id='d4'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			In this section&#44; you will browse Java elements within the JUnit project&#46; In the Package Explorer view&#44; make sure the JUnit project and the source folder are expanded so you&#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r5'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a5' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;eclemma&#46;doc&#47;pages&#47;keyboard&#46;html&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="EclEmma Java Code Coverage">
+
+
+
+        Keyboard Usage</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;eclemma&#46;doc&#47;pages&#47;introduction&#46;html">EclEmma Java Code Coverage</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;eclemma&#46;doc&#47;pages&#47;userguide&#46;html">User Guide</a></div></td></tr>
+<tr id='d5'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			Working with EclEmma is supported by several keyboard shortcuts&#46; Here you&#10;  find a complete list of all EclEmma commands along with the default key &#10;  bindings&#46;&#10; Launch Shortcuts Key
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r6'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a6' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;Browsing&#46;htm&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Java Development User Guide">
+
+
+
+        Using the Java browsing perspective</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;1">Java Development User Guide</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_1">Getting started</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;BasicTutorial&#46;htm">Basic tutorial</a></div></td></tr>
+<tr id='d6'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			In this section you will use the Java browsing perspective to browse and manipulate your code&#46; Browsing Java elements with the Package Explorer gives an overview of using t&#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r7'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a7' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;10&#46;htm&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Java Development User Guide">
+
+
+
+        Moving and copying Java elements</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;1">Java Development User Guide</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_1">Getting started</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;BasicTutorial&#46;htm">Basic tutorial</a></div></td></tr>
+<tr id='d7'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			In this section&#44; you will use refactoring to move a resource between Java packages&#46; Refactoring actions change the structure of your code without changing its semantic beha&#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r8'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a8' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;reference&#47;ref&#45;actions&#45;toolbar&#46;htm&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Java Development User Guide">
+
+
+
+        Java Toolbar Actions</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;1">Java Development User Guide</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_4">Reference</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_4_8">Toolbar</a></div></td></tr>
+<tr id='d8'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			Java Actions Toolbar Button Command Description &#91;Create a Java Project&#93; Create a Java Project This command helps you create a new Java project&#46; See new Java project wizard &#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r9'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a9' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;eclemma&#46;doc&#47;pages&#47;launching&#46;html&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="EclEmma Java Code Coverage">
+
+
+
+        Launching in Coverage Mode</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;eclemma&#46;doc&#47;pages&#47;introduction&#46;html">EclEmma Java Code Coverage</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;eclemma&#46;doc&#47;pages&#47;userguide&#46;html">User Guide</a></div></td></tr>
+<tr id='d9'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			Eclipse allows running Java programs directly from the workbench&#46; Programs&#10;  can be launched in different so called  launch modes &#46; In a standard&#10;  Eclipse installation y
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r10'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a10' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;eclemma&#46;doc&#47;pages&#47;introduction&#46;html&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="EclEmma Java Code Coverage">
+
+
+
+        Introduction</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;eclemma&#46;doc&#47;pages&#47;introduction&#46;html">EclEmma Java Code Coverage</a> &#8250; </div></td></tr>
+<tr id='d10'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			EclEmma Java Code Coverage Tool &#10;  EclEmma is a free Java code coverage tool for Eclipse&#44; available under the&#10;   Eclipse Public License &#46; It brings&#10;  code coverage analysis directly into the Eclipse w
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r11'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a11' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;ExtractMethod&#46;htm&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Java Development User Guide">
+
+
+
+        Extracting a new method</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;1">Java Development User Guide</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_1">Getting started</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;BasicTutorial&#46;htm">Basic tutorial</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_1_0_3">Editing Java elements</a></div></td></tr>
+<tr id='d11'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			In this section&#44; you will improve the code of the constructor of junit&#46;framework&#46;TestSuite&#46; To make the intent of the code clearer&#44; you will extract the code that collects &#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r12'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a12' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;6&#46;htm&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Java Development User Guide">
+
+
+
+        Viewing the type hierarchy</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;1">Java Development User Guide</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_1">Getting started</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;BasicTutorial&#46;htm">Basic tutorial</a></div></td></tr>
+<tr id='d12'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			In this section&#44; you will learn about using the Type Hierarchy view by viewing classes and members in a variety of different ways&#46; In the Package Explorer view&#44; find junit&#46;&#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r13'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a13' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;eclemma&#46;doc&#47;pages&#47;userguide&#46;html&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="EclEmma Java Code Coverage">
+
+
+
+        User Guide</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;eclemma&#46;doc&#47;pages&#47;introduction&#46;html">EclEmma Java Code Coverage</a> &#8250; </div></td></tr>
+<tr id='d13'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			EclEmma records which parts of your Java code are executed during a particular&#10;  program launch&#46; This technique is called  code coverage analysis  and&#10;  typically used with automated tes
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r14'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a14' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;concepts&#47;concept&#45;java&#45;views&#46;htm&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Java Development User Guide">
+
+
+
+        &#10;      Java Views&#10;    </a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;1">Java Development User Guide</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_2">Concepts</a></div></td></tr>
+<tr id='d14'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			The Java development tools contribute the following views to the workbench&#58;&#10;     &#10;      Java&#10;     &#10;          Package Explorer View&#10;         &#10;          The  Package Explor
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r15'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a15' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;12&#46;htm&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Java Development User Guide">
+
+
+
+        &#10;      Running your programs&#10;    </a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;1">Java Development User Guide</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_1">Getting started</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;BasicTutorial&#46;htm">Basic tutorial</a></div></td></tr>
+<tr id='d15'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			In this section&#44; you will learn more about running Java&#10;      programs in the workbench&#46; In the Package Explorer view&#44; find&#10;       junit&#46;textui&#47;TestRunner&#46;java
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r16'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a16' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;platform&#46;doc&#46;user&#47;reference&#47;ref&#45;71&#46;htm&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Eclipse Platform User Guide">
+
+
+
+        Export Wizard</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;0">Eclipse Platform User Guide</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;0_4">Reference</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;0_4_3">User interface information</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;0_4_3_2">Wizards</a></div></td></tr>
+<tr id='d16'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			This wizard help you export resources from the Workbench&#46; When the &#91;command link&#93; Export wizard first comes up&#44; you must choose what type of export to do&#46; To assist in loca&#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r17'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a17' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;OrganizeImports&#46;htm&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Java Development User Guide">
+
+
+
+        &#10;      Organizing import statements&#10;    </a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;1">Java Development User Guide</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_1">Getting started</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;BasicTutorial&#46;htm">Basic tutorial</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_1_0_3">Editing Java elements</a></div></td></tr>
+<tr id='d17'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			In this section you will organize the import declarations in your source&#10;      code&#46;&#160; Open  junit&#46;samples&#47;VectorTest&#46;java  file in the Java&#10;      editor
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r18'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a18' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;9&#46;htm&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Java Development User Guide">
+
+
+
+        Creating a Java class</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;1">Java Development User Guide</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_1">Getting started</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;BasicTutorial&#46;htm">Basic tutorial</a></div></td></tr>
+<tr id='d18'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			In this section&#44; you will create a new Java class and add methods using code generation actions&#46; In the Package Explorer view&#44; select the JUnit project&#46; Click the New Java &#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r19'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a19' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;11&#46;htm&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Java Development User Guide">
+
+
+
+        Searching the workbench</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;1">Java Development User Guide</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_1">Getting started</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;BasicTutorial&#46;htm">Basic tutorial</a></div></td></tr>
+<tr id='d19'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			In this section&#44; you will search the workbench for Java elements&#46; In the Search dialog&#44; you can perform file&#44; text or Java searches&#46; Java searches operate on the structure &#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r20'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a20' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;14&#46;htm&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Java Development User Guide">
+
+
+
+        Evaluating expressions</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;1">Java Development User Guide</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_1">Getting started</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;BasicTutorial&#46;htm">Basic tutorial</a></div></td></tr>
+<tr id='d20'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			In this section&#44; you will evaluate expressions in the context of your running Java program&#46; Debug junit&#46;samples&#46;VectorTest&#46;java to the breakpoint in the setUp&#40;&#41; method and &#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r21'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a21' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;xtext&#46;doc&#47;contents&#47;303_runtime_concepts&#46;html&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Xtext Documentation">
+
+
+
+        Language Implementation</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;xtext&#46;doc&#47;contents&#47;index&#46;html">Xtext Documentation</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;xtext&#46;doc&#47;contents&#47;301_grammarlanguage&#46;html">Reference Documentation</a></div></td></tr>
+<tr id='d21'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			This chapter describes the platform&#45;independent language features that are not covered by the grammar language&#46; Some code examples in this chapter are given in the Xtend la&#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r22'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a22' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;ContentAssist&#46;htm&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Java Development User Guide">
+
+
+
+        Using content assist</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;1">Java Development User Guide</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_1">Getting started</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;BasicTutorial&#46;htm">Basic tutorial</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_1_0_3">Editing Java elements</a></div></td></tr>
+<tr id='d22'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			In this section you will use content assist to finish writing a new method&#46; Open the file junit&#46;samples&#47;VectorTest&#46;java in the Java editor if you do not already have it ope&#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r23'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a23' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;Quickviews&#46;htm&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Java Development User Guide">
+
+
+
+        Using quick views</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;1">Java Development User Guide</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_1">Getting started</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;BasicTutorial&#46;htm">Basic tutorial</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_1_0_3">Editing Java elements</a></div></td></tr>
+<tr id='d23'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			In this section&#44; you will be introduced to the quick outline view&#46; Quick views are in&#45;place views which are shown on top of the editor area and can easily be controlled usi&#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r24'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a24' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;13&#46;htm&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Java Development User Guide">
+
+
+
+        Debugging your programs</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;1">Java Development User Guide</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_1">Getting started</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;BasicTutorial&#46;htm">Basic tutorial</a></div></td></tr>
+<tr id='d24'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			In this section&#44; you will debug a Java program&#46; In the Package Explorer view in the Java perspective&#44; double&#45;click junit&#46;samples&#47;VectorTest&#46;java to open it in an editor&#46; Pl&#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r25'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a25' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;8&#46;htm&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Java Development User Guide">
+
+
+
+        Renaming Java elements</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;1">Java Development User Guide</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_1">Getting started</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;BasicTutorial&#46;htm">Basic tutorial</a></div></td></tr>
+<tr id='d25'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			In this section&#44; you will rename a Java element using refactoring&#46; Refactoring actions change the structure of your code without changing its semantics &#40;behavior&#41;&#46; In the P&#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r26'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a26' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;LocalHistory&#46;htm&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Java Development User Guide">
+
+
+
+        Using the local history</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;1">Java Development User Guide</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_1">Getting started</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;BasicTutorial&#46;htm">Basic tutorial</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_1_0_3">Editing Java elements</a></div></td></tr>
+<tr id='d26'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			In this section&#44; you will use the local history feature to switch to a previously saved version of an individual Java element&#46; Open junit&#46;samples&#47;VectorTest&#46;java file in th&#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r27'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a27' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;15&#46;htm&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Java Development User Guide">
+
+
+
+        Evaluating snippets</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;1">Java Development User Guide</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_1">Getting started</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;BasicTutorial&#46;htm">Basic tutorial</a></div></td></tr>
+<tr id='d27'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			In this section&#44; you will evaluate Java expressions using the Java scrapbook&#46; Java scrapbook pages allow you to experiment with Java code fragments before putting them in y&#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r28'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a28' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;OpenJavaEditor&#46;htm&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Java Development User Guide">
+
+
+
+        Opening a Java editor</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;1">Java Development User Guide</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_1">Getting started</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;BasicTutorial&#46;htm">Basic tutorial</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_1_0_3">Editing Java elements</a></div></td></tr>
+<tr id='d28'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			In this section&#44; you will learn how to open an editor for Java files&#46; You will also learn about some of the basic Java editor features&#46; Expand the package junit&#46;samples and&#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r29'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a29' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;platform&#46;doc&#46;user&#47;reference&#47;ref&#45;10&#46;htm&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Eclipse Platform User Guide">
+
+
+
+        General</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;0">Eclipse Platform User Guide</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;0_4">Reference</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;platform&#46;doc&#46;user&#47;reference&#47;ref&#45;72&#46;htm">Preferences</a></div></td></tr>
+<tr id='d29'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			settings for the Workbench&#46; The term Workbench refers to the desktop development environment&#46; Each Workbench window contains one or more perspectives&#46; Perspectives contain &#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r30'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a30' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;reference&#47;ref&#45;icons&#46;htm&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Java Development User Guide">
+
+
+
+        JDT Icons</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;1">Java Development User Guide</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_4">Reference</a></div></td></tr>
+<tr id='d30'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			&#91;Compilation Unit &#40;&#42;&#46;java file&#41;&#93; Compilation unit &#40;&#42;&#46;java file&#41; &#91;File ending with &#46;java&#93; Java file which is not on a build path &#91;class file&#93; Class file &#91;generic file &#40;unkno&#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r31'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a31' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;mylyn&#46;help&#46;ui&#47;Mylyn&#47;FAQ&#47;Integration&#45;with&#45;other&#45;tools&#46;html&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Mylyn Documentation">
+
+
+
+        Mylyn FAQ &#45; Integration with other tools</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;6">Mylyn Documentation</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;6_0">Tasks User Guide</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;6_0_1">Frequently Asked Questions</a></div></td></tr>
+<tr id='d31'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			Integration with other tools WikiText Misc Integration with other tools See the &#10;&#9;&#9;&#9; Mylyn Extensions  page for a listing of integration downloads&#46;&#10;&#9;&#9; Mylyn relies on &#10;&#9;&#9;&#9; Bridges  to integrate the co
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r32'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a32' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;xtext&#46;doc&#47;contents&#47;103_domainmodelnextsteps&#46;html&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Xtext Documentation">
+
+
+
+        15 Minutes Tutorial &#45; Extended</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;xtext&#46;doc&#47;contents&#47;index&#46;html">Xtext Documentation</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;xtext&#46;doc&#47;contents&#47;102_domainmodelwalkthrough&#46;html">Getting Started</a></div></td></tr>
+<tr id='d32'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			After you have developed your first own DSL&#44; the question arises how the behavior and the semantics of the language can be customized&#46; Here you find a few mini&#45;tutorials th&#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r33'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a33' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;EditorTemplates&#46;htm&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Java Development User Guide">
+
+
+
+        Using code templates</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;1">Java Development User Guide</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_1">Getting started</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;BasicTutorial&#46;htm">Basic tutorial</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_1_0_3">Editing Java elements</a></div></td></tr>
+<tr id='d33'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			In this section you will use content assist to fill in a template for a common loop structure&#46; Open junit&#46;samples&#47;VectorTest&#46;java file in the Java editor if you do not alre&#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r34'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a34' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;reference&#47;preferences&#47;ref&#45;preferences&#45;java&#46;htm&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Java Development User Guide">
+
+
+
+        Java Preferences</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;1">Java Development User Guide</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_4">Reference</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_4_4">Preferences</a></div></td></tr>
+<tr id='d34'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			The following Java preferences can be set on the &#91;Opens the Java preference page&#93; Java preference page and its sub&#45;pages&#46; Appearance Build Path Code Style Compiler Debug Ed&#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r35'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a35' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;7&#46;htm&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Java Development User Guide">
+
+
+
+        Identifying problems in your code</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;1">Java Development User Guide</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_1">Getting started</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;gettingStarted&#47;qs&#45;BasicTutorial&#46;htm">Basic tutorial</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_1_0_3">Editing Java elements</a></div></td></tr>
+<tr id='d35'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			In this section&#44; you will review the different indicators for identifying problems in your code&#46; Build problems are displayed in the Problems view and annotated in the vert&#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r36'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a36' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;reference&#47;ref&#45;menu&#45;file&#46;htm&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Java Development User Guide">
+
+
+
+        File actions</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;1">Java Development User Guide</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_4">Reference</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;reference&#47;ref&#45;jdt&#45;actions&#46;htm">Menus and Actions</a></div></td></tr>
+<tr id='d36'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			File menu commands&#58; Name Function Keyboard Shortcut New Create a Java element or a new resource&#46; Configure which elements are shown in the submenu in Window &#62; Customize Per&#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r37'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a37' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;reference&#47;ref&#45;menu&#45;search&#46;htm&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Java Development User Guide">
+
+
+
+        Search Actions</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;1">Java Development User Guide</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_4">Reference</a> &#8250; <a href="&#46;&#46;&#47;nav&#47;1_4_7">Search</a></div></td></tr>
+<tr id='d37'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			Search menu commands&#58; Name Function Search&#46;&#46;&#46; Opens the search dialog &#40;Ctrl+H&#41; File&#46;&#46;&#46; Opens the search dialog on the File search page Java&#46;&#46;&#46; Opens the search dialog on th&#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r38'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a38' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;xtext&#46;doc&#47;contents&#47;340_lsp_support&#46;html&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Xtext Documentation">
+
+
+
+        LSP Support</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;xtext&#46;doc&#47;contents&#47;index&#46;html">Xtext Documentation</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;xtext&#46;doc&#47;contents&#47;301_grammarlanguage&#46;html">Reference Documentation</a></div></td></tr>
+<tr id='d38'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			Xtext supports the generation of language servers that comply to the Language Server Protocol &#40;LSP&#41;&#46; Getting Started in Eclipse Step 1&#58; Create a new Xtext Project with lang&#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r39'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a39' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;eclemma&#46;doc&#47;pages&#47;changes&#46;html&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="EclEmma Java Code Coverage">
+
+
+
+        Change Log</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;eclemma&#46;doc&#47;pages&#47;introduction&#46;html">EclEmma Java Code Coverage</a> &#8250; </div></td></tr>
+<tr id='d39'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			EclEmma Change Log Version 3&#46;1&#46;10 &#40;2025&#47;05&#47;21&#41; Upgrade to JaCoCo 0&#46;8&#46;13 Version 3&#46;1&#46;9 &#40;2024&#47;05&#47;22&#41; Upgrade to JaCoCo 0&#46;8&#46;12 Version 3&#46;1&#46;8 &#40;2023&#47;12&#47;12&#41; Upgrade to JaCoCo 0&#46;8&#46;11 Version 3&#46;1&#46;7 &#40;2023&#47;06&#47;0
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r40'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a40' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;jdt&#46;doc&#46;user&#47;tips&#47;jdt_tips&#46;html&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Java Development User Guide">
+
+
+
+        Tips and Tricks &#40;JDT&#41;</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;nav&#47;1">Java Development User Guide</a> &#8250; </div></td></tr>
+<tr id='d40'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			The following tips and tricks give some helpful ideas for increasing your productivity&#46; See also Platform Tips and Tricks for general Eclipse tips and What&#39;s New &#40;JDT&#41; for &#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r41'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a41' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;xtend&#46;doc&#47;contents&#47;102_moviesexample&#46;html&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Xtend User Guide">
+
+
+
+        The Movies Example</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;xtend&#46;doc&#47;contents&#47;index&#46;html">Xtend User Guide</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;xtend&#46;doc&#47;contents&#47;101_gettingstarted&#46;html">Getting Started</a></div></td></tr>
+<tr id='d41'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			The movies example is included in the example project Xtend Introductory Examples &#40;src&#47;examples6&#47;Movies&#46;xtend&#41; and is about reading a file with data about movies and doing &#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r42'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a42' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;xtext&#46;doc&#47;contents&#47;302_configuration&#46;html&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Xtext Documentation">
+
+
+
+        Configuration</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;xtext&#46;doc&#47;contents&#47;index&#46;html">Xtext Documentation</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;xtext&#46;doc&#47;contents&#47;301_grammarlanguage&#46;html">Reference Documentation</a></div></td></tr>
+<tr id='d42'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			Xtext offers two levels on which you can configure your language&#58; the language generator and dependency injection&#46; The language generator uses a special DSL called MWE2 to &#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+
+<tr class='list' id='r43'>
+	<td class='icon'>
+
+
+
+	<img src="images/topic.svg" alt=""/>
+
+
+
+	</td>
+	<td align='left'>
+		<a class='link' id='a43' 
+		   href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;xtend&#46;doc&#47;contents&#47;202_xtend_classes_members&#46;html&#63;resultof&#61;%22%6a%75%6e%69%74%22%20" 
+		   onmouseover="showStatus(event);return true;"
+		   onmouseout="clearStatus();return true;"
+		   title="Xtend User Guide">
+
+
+
+        Classes and Members</a>
+	</td>
+</tr>
+<tr><td class='icon'></td><td><div class="location"><a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;xtend&#46;doc&#47;contents&#47;index&#46;html">Xtend User Guide</a> &#8250; <a href="&#46;&#46;&#47;topic&#47;org&#46;eclipse&#46;xtend&#46;doc&#47;contents&#47;201_types&#46;html">Reference Documentation</a></div></td></tr>
+<tr id='d43'>
+	<td class='icon'>
+	</td>
+	<td align='left'>
+		<div class="description">
+			At a first glance an Xtend file pretty much looks like a Java file&#46; It starts with a package declaration followed by an import section and class definitions&#46; The classes in&#46;&#46;&#46;
+		</div>
+	</td>
+</tr>
+
+</table>
+
+
+
+<script type="text/javascript">
+	selectTopicById('');
+</script>
+
+</body>
+</html>

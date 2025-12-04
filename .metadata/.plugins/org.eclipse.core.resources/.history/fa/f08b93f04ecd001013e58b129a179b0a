@@ -1,0 +1,13 @@
+package application;
+
+import org.junit.Test;
+import static org.junit.Assert.*;
+
+public class TreasureTest {
+    @Test
+    public void testTreasureIsAt() {
+        OceanMap map = OceanMap.getInstance(20);
+        Treasure treasure = new Treasure(20, map);
+        assertTrue(treasure.isAt((int)treasure.getLocation().x, (int)treasure.getLocation().y));
+    }
+}

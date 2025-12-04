@@ -1,0 +1,144 @@
+package application;
+
+import java.awt.Point;
+import java.util.Random;
+
+/**
+ * SeaMonster Class - Represents sea monsters that patrol the ocean
+ * 
+ * Sea monsters swim around randomly and can collide with the ship.
+ * Different types: Shark, Kraken, GhostShip
+ * Each type has different speeds and behaviors.
+ * 
+ * @author Student
+ * @version 1.0
+ */
+public class SeaMonster {
+    private Point location;
+    private OceanMap oceanMap;
+    private Random random;
+    private String monsterType; // "Shark", "Kraken", "GhostShip"
+    private int speed; // 1 = slow, 2 = medium, 3 = fast
+
+    /**
+     * Constructor - Create a new sea monster
+     * @param x Starting X coordinate
+     * @param y Starting Y coordinate
+     * @param dimension Size of ocean grid
+     * @param oceanMap Reference to the ocean map
+     * @param monsterType Type of monster: "Shark", "Kraken", or "GhostShip"
+     */
+    public SeaMonster(int x, int y, int dimension, OceanMap oceanMap, String monsterType) {
+        this.location = new Point(x, y);
+        this.oceanMap = oceanMap;
+        this.random = new Random();
+        this.monsterType = monsterType;
+        this.speed = setSpeedByType(monsterType);
+    }
+
+    /**
+     * Get current location of the monster
+     * @return Point with x,y coordinates
+     */
+    public Point getLocation() {
+        return location;
+    }
+
+    /**
+     * Get the type of this monster
+     * @return String type name
+     */
+    public String getMonsterType() {
+        return monsterType;
+    }
+
+    /**
+     * Check if monster is at specific coordinates
+     * @param x X coordinate to check
+     * @param y Y coordinate to check
+     * @return true if monster is at this location
+     */
+    public boolean isAt(int x, int y) {
+        return location.x == x && location.y == y;
+    }
+
+    /**
+     * Check if monster collides with ship at coordinates
+     * @param x X coordinate of ship
+     * @param y Y coordinate of ship
+     * @return true if collision occurs
+     */
+    public boolean collidesWith(int x, int y) {
+        return location.x == x && location.y == y;
+    }
+
+    /**
+     * Move the monster randomly (patrol behavior)
+     */
+    public void move() {
+        // Move randomly in one of 4 directions
+        int direction = random.nextInt(4);
+        Point newLocation = new Point(location.x, location.y);
+
+        switch (direction) {
+            case 0: // North
+                newLocation.y--;
+                break;
+            case 1: // South
+                newLocation.y++;
+                break;
+            case 2: // East
+                newLocation.x++;
+                break;
+            case 3: // West
+                newLocation.x--;
+                break;
+        }
+
+        // Check if valid move and update location
+        if (isValidMove(newLocation)) {
+            location = newLocation;
+        }
+    }
+
+    /**
+     * Check if a move is valid (in bounds and not on island)
+     * @param newLocation Point to check
+     * @return true if move is valid
+     */
+    private boolean isValidMove(Point newLocation) {
+        return oceanMap.isINBounds(newLocation.x, newLocation.y) && 
+               !oceanMap.isIsland(newLocation.x, newLocation.y);
+    }
+
+    /**
+     * Set speed based on monster type
+     * @param type Type of monster
+     * @return Speed value
+     */
+    private int setSpeedByType(String type) {
+        switch (type) {
+            case "Shark":
+                return 2; // Medium speed
+            case "Kraken":
+                return 1; // Slow
+            case "GhostShip":
+                return 3; // Fast
+            default:
+                return 1;
+        }
+    }
+
+    /**
+     * Get the image path for this monster
+     * @return String path to image file
+     */
+    public String getImagePath() {
+        return "file:" + monsterType.toLowerCase() + ".png";
+    }
+
+    @Override
+    public String toString() {
+        return monsterType + " at (" + location.x + ", " + location.y + ")";
+    }
+}

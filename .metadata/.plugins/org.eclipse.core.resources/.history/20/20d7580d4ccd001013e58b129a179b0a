@@ -1,0 +1,199 @@
+package application;
+
+import com.sun.net.httpserver.HttpServer;
+import com.sun.net.httpserver.HttpHandler;
+import com.sun.net.httpserver.HttpExchange;
+import java.io.*;
+import java.net.InetSocketAddress;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * GameWebServer - Backend for Christopher Columbus Game
+ * Simple, working version - no handler classes needed
+ */
+public class GameWebServer {
+    
+    private static final int PORT = 7272;
+    private static Map<String, WebGameSession> gameSessions = new HashMap<>();
+    private static int sessionCounter = 0;
+
+    public static void main(String[] args) {
+        try {
+            HttpServer server = HttpServer.create(new InetSocketAddress("localhost", PORT), 50);
+            
+            // Frontend
+            server.createContext("/", exchange -> handleFrontend(exchange));
+            
+            // API Endpoints
+            server.createContext("/api/start", exchange -> handleStart(exchange));
+            server.createContext("/api/move", exchange -> handleMove(exchange));
+            server.createContext("/api/state", exchange -> handleState(exchange));
+            
+            server.setExecutor(null);
+            server.start();
+            
+            System.out.println("╔════════════════════════════════════════════════════════╗");
+            System.out.println("║    ⚓ Christopher Columbus - Backend Server ⚓          ║");
+            System.out.println("║                                                        ║");
+            System.out.println("║  🌐 Open your browser and go to:                       ║");
+            System.out.println("║     http://localhost:7272                              ║");
+            System.out.println("║                                                        ║");
+            System.out.println("║  ✅ Server running on Port 7272                        ║");
+            System.out.println("║  Press Ctrl+C to stop                                  ║");
+            System.out.println("╚════════════════════════════════════════════════════════╝");
+            
+        } catch (IOException e) {
+            System.err.println("ERROR: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private static void handleFrontend(HttpExchange exchange) throws IOException {
+        String html = getHtmlContent();
+        exchange.getResponseHeaders().set("Content-Type", "text/html; charset=UTF-8");
+        exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+        exchange.sendResponseHeaders(200, html.getBytes().length);
+        try (OutputStream os = exchange.getResponseBody()) {
+            os.write(html.getBytes());
+        }
+    }
+
+    private static void handleStart(HttpExchange exchange) throws IOException {
+        String query = exchange.getRequestURI().getQuery();
+        String difficulty = "MEDIUM";
+        if (query != null && query.contains("difficulty=")) {
+            difficulty = query.split("=")[1].toUpperCase();
+        }
+        String sessionId = "session_" + (++sessionCounter);
+        WebGameSession session = new WebGameSession(sessionId, difficulty);
+        gameSessions.put(sessionId, session);
+        String response = "{\"sessionId\":\"" + sessionId + "\",\"difficulty\":\"" + difficulty + "\"}";
+        sendJSON(exchange, response);
+    }
+
+    private static void handleMove(HttpExchange exchange) throws IOException {
+        String query = exchange.getRequestURI().getQuery();
+        String sessionId = "";
+        String direction = "";
+        if (query != null) {
+            String[] params = query.split("&");
+            for (String param : params) {
+                if (param.startsWith("session=")) sessionId = param.substring(8);
+                if (param.startsWith("direction=")) direction = param.substring(10);
+            }
+        }
+        WebGameSession session = gameSessions.get(sessionId);
+        if (session != null) {
+            session.moveShip(direction);
+        }
+        sendJSON(exchange, "{\"success\":true}");
+    }
+
+    private static void handleState(HttpExchange exchange) throws IOException {
+        String query = exchange.getRequestURI().getQuery();
+        String sessionId = "";
+        if (query != null && query.contains("session=")) {
+            sessionId = query.split("=")[1];
+        }
+        WebGameSession session = gameSessions.get(sessionId);
+        String response = (session != null) ? session.getGameState() : "{\"error\":\"Session not found\"}";
+        sendJSON(exchange, response);
+    }
+
+    private static void sendJSON(HttpExchange exchange, String json) throws IOException {
+        exchange.getResponseHeaders().set("Content-Type", "application/json");
+        exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+        exchange.sendResponseHeaders(200, json.getBytes().length);
+        try (OutputStream os = exchange.getResponseBody()) {
+            os.write(json.getBytes());
+        }
+    }
+
+    private static String getHtmlContent() {
+        return "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>Christopher Columbus</title><style>body{font-family:Arial;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);color:white;text-align:center;padding:20px}#container{max-width:900px;margin:0 auto;background:rgba(0,0,0,0.8);padding:40px;border-radius:15px;border:2px solid #FFD700}h1{color:#FFD700;font-size:2.5em;margin:0}p{color:#87CEEB;font-size:1.1em}#menu{display:grid;grid-template-columns:repeat(2,1fr);gap:15px;margin:20px 0}.btn{padding:15px;font-size:1em;border:none;border-radius:8px;cursor:pointer;font-weight:bold;transition:0.3s}.btn:hover{transform:scale(1.05)}.btn-easy{background:#32CD32;color:black}.btn-medium{background:#FF8C00;color:white}.btn-hard{background:#DC143C;color:white}.btn-survival{background:#8B0000;color:white}#game{display:none}#game.active{display:block}.status{background:rgba(0,0,0,0.5);padding:15px;margin:20px 0;border-radius:8px}#grid{display:inline-grid;grid-template-columns:repeat(20,25px);gap:2px;padding:15px;background:#333;margin:20px 0}.cell{width:25px;height:25px;background:#87CEEB;border:1px solid #333;display:flex;justify-content:center;align-items:center;font-size:0.9em}.cell.island{background:#228B22}.cell.treasure{background:#FFD700;animation:pulse 1s infinite}.cell.ship{background:#FF4500}@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}.controls{display:grid;grid-template-columns:repeat(3,60px);gap:5px;justify-content:center;margin:20px 0}.arrow-btn{padding:10px;background:#4CAF50;color:white;border:none;border-radius:5px;cursor:pointer;font-size:1.5em;font-weight:bold}.arrow-btn:hover{background:#45a049}.restart{padding:12px 30px;background:#FFD700;color:black;border:none;border-radius:8px;cursor:pointer;font-weight:bold;margin-top:20px}</style></head><body><div id=\"container\"><h1>⚓ Christopher Columbus ⚓</h1><p>Quest for the Lost City of Gold</p><div id=\"menu\"><button class=\"btn btn-easy\" onclick=\"startGame('EASY')\">🟢 EASY</button><button class=\"btn btn-medium\" onclick=\"startGame('MEDIUM')\">🟠 MEDIUM</button><button class=\"btn btn-hard\" onclick=\"startGame('HARD')\">🔴 HARD</button><button class=\"btn btn-survival\" onclick=\"startGame('SURVIVAL')\">💀 SURVIVAL</button></div><div id=\"game\"><div class=\"status\"><div>Mode: <span id=\"difficulty\">MEDIUM</span></div><div>Status: <span id=\"status\">PLAYING</span></div><div>Score: <span id=\"score\">0</span></div><div>Position: (<span id=\"shipX\">0</span>,<span id=\"shipY\">0</span>)</div><div>Treasure: (<span id=\"treasureX\">?</span>,<span id=\"treasureY\">?</span>)</div></div><div id=\"grid\"></div><div class=\"controls\"><div></div><button class=\"arrow-btn\" onclick=\"moveShip('up')\">⬆️</button><div></div><button class=\"arrow-btn\" onclick=\"moveShip('left')\">⬅️</button><button class=\"arrow-btn\" onclick=\"moveShip('down')\">⬇️</button><button class=\"arrow-btn\" onclick=\"moveShip('right')\">➡️</button></div><button class=\"restart\" onclick=\"location.reload()\">🔄 Play Again</button></div></div><script>let sessionId=null;function startGame(d){fetch('/api/start?difficulty='+d).then(r=>r.json()).then(data=>{sessionId=data.sessionId;document.getElementById('menu').style.display='none';document.getElementById('game').classList.add('active');document.getElementById('difficulty').textContent=d;updateGame();setInterval(updateGame,500)}).catch(err=>alert('Error: '+err))}function moveShip(dir){if(!sessionId)return;fetch('/api/move?session='+sessionId+'&direction='+dir).then(r=>r.json()).then(()=>updateGame()).catch(err=>console.error(err))}function updateGame(){if(!sessionId)return;fetch('/api/state?session='+sessionId).then(r=>r.json()).then(data=>{renderGrid(data.grid);document.getElementById('status').textContent=data.status;document.getElementById('score').textContent=data.score;document.getElementById('shipX').textContent=data.shipX;document.getElementById('shipY').textContent=data.shipY;document.getElementById('treasureX').textContent=data.treasureX;document.getElementById('treasureY').textContent=data.treasureY;if(data.status==='WIN')alert('🏆 YOU FOUND THE TREASURE! Score: '+data.score)}).catch(err=>console.error(err))}function renderGrid(grid){const g=document.getElementById('grid');g.innerHTML='';for(let i=0;i<grid.length;i++)for(let j=0;j<grid[i].length;j++){const c=document.createElement('div');c.className='cell';switch(grid[i][j]){case 'S':c.className+=' ship';c.textContent='🚢';break;case 'T':c.className+=' treasure';c.textContent='💰';break;case 'W':c.className+=' island';c.textContent='🏝️';break;default:c.textContent=''}g.appendChild(c)}}document.addEventListener('keydown',(e)=>{if(e.key==='ArrowUp')moveShip('up');if(e.key==='ArrowDown')moveShip('down');if(e.key==='ArrowLeft')moveShip('left');if(e.key==='ArrowRight')moveShip('right')})</script></body></html>";
+    }
+}
+
+/**
+ * WebGameSession - Manages individual game sessions
+ */
+class WebGameSession {
+    private String sessionId;
+    private String difficulty;
+    private int shipX = 1;
+    private int shipY = 1;
+    private int treasureX;
+    private int treasureY;
+    private int score = 0;
+    private String status = "PLAYING";
+    private int[][] grid;
+    private int dimension = 20;
+
+    public WebGameSession(String sessionId, String difficulty) {
+        this.sessionId = sessionId;
+        this.difficulty = difficulty;
+        initializeGame();
+    }
+
+    private void initializeGame() {
+        grid = new int[dimension][dimension];
+        for (int i = 0; i < dimension; i++) {
+            for (int j = 0; j < dimension; j++) {
+                grid[i][j] = 0;
+            }
+        }
+        for (int i = 0; i < 12; i++) {
+            int x = (int)(Math.random() * dimension);
+            int y = (int)(Math.random() * dimension);
+            if (grid[x][y] == 0 && !(x == 1 && y == 1)) {
+                grid[x][y] = 1;
+            }
+        }
+        do {
+            treasureX = (int)(Math.random() * dimension);
+            treasureY = (int)(Math.random() * dimension);
+        } while (grid[treasureX][treasureY] == 1);
+    }
+
+    public void moveShip(String direction) {
+        int newX = shipX;
+        int newY = shipY;
+        switch(direction.toLowerCase()) {
+            case "up": newY = Math.max(0, newY - 1); break;
+            case "down": newY = Math.min(dimension - 1, newY + 1); break;
+            case "left": newX = Math.max(0, newX - 1); break;
+            case "right": newX = Math.min(dimension - 1, newX + 1); break;
+        }
+        if (grid[newY][newX] != 1) {
+            shipX = newX;
+            shipY = newY;
+            score += 10;
+            if (shipX == treasureX && shipY == treasureY) {
+                status = "WIN";
+                score += 1000;
+            }
+        }
+    }
+
+    public String getGameState() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\"grid\":[");
+        for (int i = 0; i < dimension; i++) {
+            sb.append("[");
+            for (int j = 0; j < dimension; j++) {
+                if (i == shipY && j == shipX) sb.append("\"S\"");
+                else if (i == treasureY && j == treasureX) sb.append("\"T\"");
+                else if (grid[i][j] == 1) sb.append("\"W\"");
+                else sb.append("\"E\"");
+                if (j < dimension - 1) sb.append(",");
+            }
+            sb.append("]");
+            if (i < dimension - 1) sb.append(",");
+        }
+        sb.append("],\"status\":\"").append(status).append("\",\"score\":").append(score)
+          .append(",\"shipX\":").append(shipX).append(",\"shipY\":").append(shipY)
+          .append(",\"treasureX\":").append(treasureX).append(",\"treasureY\":").append(treasureY).append("}");
+        return sb.toString();
+    }
+}

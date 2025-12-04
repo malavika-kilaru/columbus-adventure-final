@@ -1,0 +1,17 @@
+package application;
+public enum GameState {
+	PLAYING("Game is running"),
+	WIN("Player won -found tresure!"),
+	LOSE("Player lost -caught by enemy!"),
+	PAUSED("Game is paused");
+	
+	private String description;
+	
+	GameState(String description) {
+		this.description =description;
+	}
+	public String getDescription() {
+		return description;
+	}
+
+}

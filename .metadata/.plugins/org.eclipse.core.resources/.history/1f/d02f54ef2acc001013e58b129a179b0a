@@ -1,0 +1,30 @@
+package application;
+
+/**
+ * ChasePirateShipFactory - Creates aggressive chasing pirates
+ * 
+ * Concrete factory that creates pirate ships with ChaseStrategy.
+ * These pirates aggressively chase the player's ship.
+ * 
+ * Concrete Implementation of PirateShipFactory
+ * 
+ * @author Student
+ * @version 1.0
+ */
+public class ChasePirateShipFactory extends PirateShipFactory {
+    
+    /**
+     * Creates a pirate ship with ChaseStrategy
+     * 
+     * @param x Starting X coordinate
+     * @param y Starting Y coordinate
+     * @param dimension Grid dimension
+     * @param oceanMap Reference to ocean map
+     * @return PirateShip configured with ChaseStrategy
+     */
+    @Override
+    public PirateShip createPirateShip(int x, int y, int dimension, OceanMap oceanMap) {
+        PirateMovementStrategy chaseStrategy = new ChaseStrategy();
+        return new PirateShip(x, y, dimension, oceanMap, chaseStrategy);
+    }
+}

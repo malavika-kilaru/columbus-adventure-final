@@ -1,0 +1,83 @@
+package application;
+
+import javafx.application.Application;
+import javafx.scene.Scene;
+import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
+import javafx.geometry.Point2D;
+import javafx.scene.input.MouseEvent;
+import javafx.stage.Stage;
+import javafx.event.EventHandler;
+
+public class GardenLayout extends Application {
+    
+  private Pane root;
+  private iComposite dragging =null;
+  private double lastX;
+  private double lastY;
+  
+  
+  private Flower flower;
+  private FlowerBed flowerBed;
+  
+    public void start(Stage primaryStage) {
+         root = new Pane();
+        root.setPrefSize(800, 600);
+        root.setStyle("-fx-background-color: lightgreen;");
+        
+        Scene scene = new Scene(root, 800, 600);
+        
+        flowerBed=new FlowerBed(new Point2D(400,300),200,150);
+        root.getChildren().add(flowerBed.getRectangle());
+        
+        flower=new Flower(new Point2D(150,150),Color.RED,true);
+        root.getChildren().add(flower.getCircle());
+        
+        
+    
+    EventHandler<MouseEvent>mouseHandler=new EventHandler<MouseEvent>() {
+    public void handle(MouseEvent event) {
+    	if(event.getEventType()==MouseEvent.MOUSE_PRESSED) {
+    		if(event.getTarget() instanceof javafx.scene.Node) {
+    			javafx.scene.Node node=(javafx.scene.Node)event.getTarget(); 
+    				Object userData=node.getUserData();
+    				if(userData instanceof iComposite) {
+    					dragging=(iComposite) userData;
+    				}
+    			}
+    		}
+    		else if(event.getEventType()==MouseEvent.MOUSE_DRAGGED) {
+    			if(dragging!=null) {
+    				double deltaX=event.getX()-lastX;
+    				double deltaY=event.getY()-lastY;
+    				dragging.move(deltaX,deltaY);
+    				
+    				lastX=event.getX();
+    				lastY=event.getY();
+    			}
+    		
+    		}
+    		else if (event.getEventType()==MouseEvent.MOUSE_RELEASED) {
+    			if(dragging!=null) {
+    				Point2D mousePos=new Point2D(event.getX(),event.getY());
+    			    if(dragging == flower&& flowerBed.conatins(mousePos)) {
+    			         flowerBed.add(flower);
+    			    }
+    		}
+        	 dragging=null;
+          }
+    	}
+    
+    };
+    scene.setOnMousePressed(mouseHandler);
+    scene.setOnMouseDragged(mouseHandler);
+    scene.setOnMouseReleased(mouseHandler);
+    
+    primaryStage.setTitle("Garden Layout");
+    primaryStage.setScene(scene);
+    primaryStage.show();
+  }
+    public static void main(String[] args) {
+        launch(args);
+    }
+}

@@ -1,0 +1,128 @@
+package application;
+
+import org.junit.Test;
+import org.junit.Before;
+import static org.junit.Assert.*;
+
+/**
+ * ShipTest - JUnit tests for Ship class
+ * Tests ship movement, boundaries, and location tracking
+ */
+public class ShipTest {
+    
+    private Ship ship;
+    private OceanMap oceanMap;
+    
+    @Before
+    public void setUp() {
+        // Reset singleton before each test
+        OceanMap.instance = null;
+        oceanMap = OceanMap.getInstance(20);
+        ship = new Ship(1, 1, 20);
+    }
+    
+    /**
+     * Test 1: Ship initializes at correct location (1, 1)
+     */
+    @Test
+    public void testShipInitialization() {
+        assertEquals("Ship X position should be 1", 1, ship.getShipLocation().x);
+        assertEquals("Ship Y position should be 1", 1, ship.getShipLocation().y);
+    }
+    
+    /**
+     * Test 2: Ship moves east correctly (increases X)
+     */
+    @Test
+    public void testShipMoveEast() {
+        ship.goEast(oceanMap);
+        assertEquals("Ship X should increase by 1", 2, ship.getShipLocation().x);
+    }
+    
+    /**
+     * Test 3: Ship moves west correctly (decreases X)
+     */
+    @Test
+    public void testShipMoveWest() {
+        ship.goWest(oceanMap);
+        assertEquals("Ship X should decrease by 1", 0, ship.getShipLocation().x);
+    }
+    
+    /**
+     * Test 4: Ship moves north correctly (decreases Y)
+     */
+    @Test
+    public void testShipMoveNorth() {
+        ship.goNorth(oceanMap);
+        assertEquals("Ship Y should decrease by 1", 0, ship.getShipLocation().y);
+    }
+    
+    /**
+     * Test 5: Ship moves south correctly (increases Y)
+     */
+    @Test
+    public void testShipMoveSouth() {
+        ship.goSouth(oceanMap);
+        assertEquals("Ship Y should increase by 1", 2, ship.getShipLocation().y);
+    }
+    
+    /**
+     * Test 6: Ship doesn't go past west boundary (X can't be negative)
+     */
+    @Test
+    public void testShipBoundaryWest() {
+        // Try to move west 10 times from position (1, 1)
+        for (int i = 0; i < 10; i++) {
+            ship.goWest(oceanMap);
+        }
+        // Should be stuck at x=0 (minimum boundary)
+        assertEquals("Ship X should not go below 0", 0, ship.getShipLocation().x);
+    }
+    
+    /**
+     * Test 7: Ship doesn't go past east boundary (X can't exceed grid dimension)
+     */
+    @Test
+    public void testShipBoundaryEast() {
+        // Try to move east many times
+        for (int i = 0; i < 50; i++) {
+            ship.goEast(oceanMap);
+        }
+        // Should be stuck at x=19 (maximum for 20x20 grid, since 0-19)
+        assertEquals("Ship X should not go beyond 19 for 20x20 grid", 19, ship.getShipLocation().x);
+    }
+    
+    /**
+     * Test 8: Ship doesn't go past north boundary (Y can't be negative)
+     */
+    @Test
+    public void testShipBoundaryNorth() {
+        // Try to move north 10 times from position (1, 1)
+        for (int i = 0; i < 10; i++) {
+            ship.goNorth(oceanMap);
+        }
+        // Should be stuck at y=0 (minimum boundary)
+        assertEquals("Ship Y should not go below 0", 0, ship.getShipLocation().y);
+    }
+    
+    /**
+     * Test 9: Ship doesn't go past south boundary (Y can't exceed grid dimension)
+     */
+    @Test
+    public void testShipBoundarySouth() {
+        // Try to move south many times
+        for (int i = 0; i < 50; i++) {
+            ship.goSouth(oceanMap);
+        }
+        // Should be stuck at y=19 (maximum for 20x20 grid)
+        assertEquals("Ship Y should not go beyond 19 for 20x20 grid", 19, ship.getShipLocation().y);
+    }
+    
+    /**
+     * Test 10: Ship location is not null
+     */
+    @Test
+    public void testShipLocationNotNull() {
+        assertNotNull("Ship location should not be null", ship.getShipLocation());
+    }
+}

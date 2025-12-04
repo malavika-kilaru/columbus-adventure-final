@@ -1,0 +1,82 @@
+package application;
+
+import javafx.application.Application;
+import javafx.scene.Scene;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.VBox;
+import javafx.scene.layout.HBox;
+import javafx.scene.paint.Color;
+import javafx.geometry.Point2D;
+import javafx.scene.input.MouseEvent;
+import javafx.stage.Stage;
+import javafx.event.EventHandler;
+import javafx.scene.shape.Circle;
+import javafx.scene.shape.Rectangle;
+import javafx.scene.control.Label;
+import javafx.geometry.Insets;
+import java.util.ArrayList;
+
+public class GardenLayout extends Application {
+    
+  private Pane gardenPane;
+  private VBox Palette;
+  private iComposite dragging =null;
+  private double lastX;
+  private double lastY;
+  
+  private ArrayList<iComposite> allItems=new ArrayList<>();
+  private ArrayList<FlowerBed> flowerBeds=new ArrayList<>();
+  
+  private String selectedType=null;
+  private Color selectedColor=null;
+  
+  
+  
+    public void start(Stage primaryStage) {
+         HBox  = new HBox ();
+         
+         createPalette(); 
+         
+        gardenPane=new Pane();
+        gardenPane.setPrefSize(800, 600);
+        gardenPane.setStyle("-fx-background-color: lightgreen;");
+        
+        root.getChildren().addAll(palette,gardenPane);
+        
+        Scene scene = new Scene(root, 900, 600);
+        
+        
+    
+    EventHandler<MouseEvent>mouseHandler=new EventHandler<MouseEvent>() {
+    public void handle(MouseEvent event) {
+    	if(event.getEventType()==MouseEvent.MOUSE_PRESSED) {
+    		handleMousePressed(event);
+    	}
+    	
+    		else if(event.getEventType()==MouseEvent.MOUSE_DRAGGED) {
+    			handleMouseDragged(event);
+    		}
+    		else if (event.getEventType()==MouseEvent.MOUSE_RELEASED) {
+    			handleMouseReleased(event);
+    		}
+    		else if(event.getEventType() ==MouseEvent.MOUSE_CLICKED) { 
+        	 handleMouseClicked(event);
+          }
+    	
+    	}
+    
+    };
+    scene.setOnMousePressed(mouseHandler);
+    scene.setOnMouseDragged(mouseHandler);
+    scene.setOnMouseReleased(mouseHandler);
+    
+    primaryStage.setTitle("Garden Layout");
+    primaryStage.setScene(scene);
+    primaryStage.show();
+  }
+    
+    
+    public static void main(String[] args) {
+        launch(args);
+    }
+}

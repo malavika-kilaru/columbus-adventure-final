@@ -1,0 +1,76 @@
+package application;
+
+import java.awt.Point;
+
+/**
+ * ChaseStrategy Class - Aggressive pirate behavior
+ * 
+ * This strategy makes pirates chase directly toward the ship.
+ * Pirates will move toward the ship's location every turn.
+ * 
+ * Concrete Implementation of PirateMovementStrategy
+ * 
+ * @author Student
+ * @version 1.0
+ */
+public class ChaseStrategy implements PirateMovementStrategy {
+    
+    /**
+     * Move pirate directly toward target (ship)
+     * 
+     * @param currentLocation Current pirate position
+     * @param targetLocation Ship location to chase
+     * @param dimension Grid dimension
+     * @param oceanMap Ocean map for collision detection
+     * @return New position after move
+     */
+    @Override
+    public Point move(Point currentLocation, Point targetLocation, int dimension, OceanMap oceanMap) {
+        Point newLocation = new Point(currentLocation.x, currentLocation.y);
+        
+        // Calculate distance to target
+        int dx = targetLocation.x - currentLocation.x;
+        int dy = targetLocation.y - currentLocation.y;
+        
+        // If already at target, don't move
+        if (dx == 0 && dy == 0) {
+            return newLocation;
+        }
+
+        // Move toward target: prioritize larger distance
+        if (Math.abs(dx) > Math.abs(dy)) {
+            // Move East or West
+            if (dx > 0) {
+                newLocation.x++; // Move East
+            } else if (dx < 0) {
+                newLocation.x--; // Move West
+            }
+        } else if (Math.abs(dy) > 0) {
+            // Move North or South
+            if (dy > 0) {
+                newLocation.y++; // Move South
+            } else if (dy < 0) {
+                newLocation.y--; // Move North
+            }
+        }
+
+        // Check if move is valid
+        if (canMoveTo(newLocation, oceanMap)) {
+            return newLocation;
+        }
+        
+        // If can't move, stay in place
+        return currentLocation;
+    }
+
+    /**
+     * Check if a location is valid to move to
+     * @param location Location to check
+     * @param oceanMap Map for collision detection
+     * @return true if move is valid
+     */
+    private boolean canMoveTo(Point location, OceanMap oceanMap) {
+        return oceanMap.isINBounds(location.x, location.y) && 
+               !oceanMap.isIsland(location.x, location.y);
+    }
+}

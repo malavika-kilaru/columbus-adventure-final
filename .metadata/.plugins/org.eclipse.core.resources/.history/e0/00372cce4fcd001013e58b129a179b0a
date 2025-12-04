@@ -1,0 +1,118 @@
+package application;
+
+import org.junit.Test;
+import org.junit.Before;
+import static org.junit.Assert.*;
+
+/**
+ * TreasureTest - JUnit tests for Treasure class
+ * Tests treasure generation, location validation, and discovery status
+ */
+public class TreasureTest {
+    
+    private Treasure treasure;
+    private OceanMap oceanMap;
+    
+    @Before
+    public void setUp() {
+        // Reset singleton before each test
+        OceanMap.instance = null;
+        oceanMap = OceanMap.getInstance(20);
+        treasure = new Treasure(20, oceanMap);
+    }
+    
+    /**
+     * Test 1: Treasure is generated at a valid location (not null)
+     */
+    @Test
+    public void testTreasureGeneration() {
+        assertNotNull("Treasure location should not be null", treasure.getLocation());
+    }
+    
+    /**
+     * Test 2: Treasure is not placed on an island
+     */
+    @Test
+    public void testTreasureNotOnIsland() {
+        int x = (int)treasure.getLocation().x;
+        int y = (int)treasure.getLocation().y;
+        assertFalse("Treasure should not be placed on an island", oceanMap.isIsland(x, y));
+    }
+    
+    /**
+     * Test 3: Treasure isAt() method works correctly
+     */
+    @Test
+    public void testTreasureIsAt() {
+        int x = (int)treasure.getLocation().x;
+        int y = (int)treasure.getLocation().y;
+        assertTrue("isAt() should return true for treasure's actual location", treasure.isAt(x, y));
+    }
+    
+    /**
+     * Test 4: Treasure is not discovered initially
+     */
+    @Test
+    public void testTreasureNotDiscoveredInitially() {
+        assertFalse("Treasure should not be discovered when first created", treasure.isDiscovered());
+    }
+    
+    /**
+     * Test 5: Treasure can be discovered
+     */
+    @Test
+    public void testTreasureDiscovery() {
+        treasure.discover();
+        assertTrue("Treasure should be discovered after calling discover()", treasure.isDiscovered());
+    }
+    
+    /**
+     * Test 6: Treasure location X is within map bounds (0-19)
+     */
+    @Test
+    public void testTreasureLocationXInBounds() {
+        int x = (int)treasure.getLocation().x;
+        assertTrue("Treasure X should be >= 0", x >= 0);
+        assertTrue("Treasure X should be < 20", x < 20);
+    }
+    
+    /**
+     * Test 7: Treasure location Y is within map bounds (0-19)
+     */
+    @Test
+    public void testTreasureLocationYInBounds() {
+        int y = (int)treasure.getLocation().y;
+        assertTrue("Treasure Y should be >= 0", y >= 0);
+        assertTrue("Treasure Y should be < 20", y < 20);
+    }
+    
+    /**
+     * Test 8: Treasure location can be set
+     */
+    @Test
+    public void testTreasureLocationCanBeSet() {
+        treasure.setLocation(5, 10);
+        assertEquals("Treasure X should be 5 after setLocation", 5, treasure.getLocation().x);
+        assertEquals("Treasure Y should be 10 after setLocation", 10, treasure.getLocation().y);
+    }
+    
+    /**
+     * Test 9: Treasure isAt() returns false for wrong location
+     */
+    @Test
+    public void testTreasureIsAtWrongLocation() {
+        int x = (int)treasure.getLocation().x;
+        int y = (int)treasure.getLocation().y;
+        assertFalse("isAt() should return false for wrong location", treasure.isAt(x + 1, y + 1));
+    }
+    
+    /**
+     * Test 10: Treasure has valid string representation
+     */
+    @Test
+    public void testTreasureToString() {
+        String str = treasure.toString();
+        assertNotNull("toString() should not return null", str);
+        assertTrue("toString() should contain 'Treasure'", str.contains("Treasure"));
+    }
+}

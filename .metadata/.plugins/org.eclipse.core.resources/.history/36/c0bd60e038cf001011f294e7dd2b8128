@@ -1,0 +1,136 @@
+package application;
+import java.awt.Point;
+import java.util.Random;
+
+public class SeaMonster {
+    private Point location;
+    private OceanMap oceanMap;
+    private Random random;
+    private String monsterType;
+    private int detectionRange = 8;
+    private Ship ship;
+
+    public SeaMonster(int x, int y, int dimension, OceanMap oceanMap, String monsterType) {
+        this.location = new Point(x, y);
+        this.oceanMap = oceanMap;
+        this.random = new Random();
+        this.monsterType = monsterType;
+    }
+
+    public void setShip(Ship ship) {
+        this.ship = ship;
+    }
+
+    public Point getLocation() {
+        return location;
+    }
+
+    public String getMonsterType() {
+        return monsterType;
+    }
+
+    public boolean isAt(int x, int y) {
+        return location.x == x && location.y == y;
+    }
+
+    public boolean collidesWith(int x, int y) {
+        return location.x == x && location.y == y;
+    }
+
+    public void move() {
+        if (ship != null && canSeeShip()) {
+            chaseShip();
+        } else {
+            randomPatrol();
+        }
+    }
+
+    private boolean canSeeShip() {
+        if (ship == null) return false;
+        
+        Point shipLoc = ship.getShipLocation();
+        double distance = Math.sqrt(
+            Math.pow(location.x - shipLoc.x, 2) + 
+            Math.pow(location.y - shipLoc.y, 2)
+        );
+        
+        return distance <= detectionRange;
+    }
+
+    private void chaseShip() {
+        if (ship == null) return;
+        
+        Point shipLoc = ship.getShipLocation();
+        
+        int dx = shipLoc.x - location.x;
+        int dy = shipLoc.y - location.y;
+        
+        if (dx == 0 && dy == 0) return;
+        
+        Point newLocation = new Point(location.x, location.y);
+        
+        if (Math.abs(dx) > Math.abs(dy)) {
+            if (dx > 0) {
+                newLocation.x++;
+            } else if (dx < 0) {
+                newLocation.x--;
+            }
+        } else if (Math.abs(dy) > 0) {
+            if (dy > 0) {
+                newLocation.y++;
+            } else if (dy < 0) {
+                newLocation.y--;
+            }
+        }
+        
+        if (isValidMove(newLocation)) {
+            location = newLocation;
+        }
+    }
+
+    private void randomPatrol() {
+        int direction = random.nextInt(4);
+        Point newLocation = new Point(location.x, location.y);
+
+        switch (direction) {
+            case 0:
+                newLocation.y--;
+                break;
+            case 1:
+                newLocation.y++;
+                break;
+            case 2:
+                newLocation.x++;
+                break;
+            case 3:
+                newLocation.x--;
+                break;
+        }
+
+        if (isValidMove(newLocation)) {
+            location = newLocation;
+        }
+    }
+
+    private boolean isValidMove(Point newLocation) {
+        return oceanMap.isINBounds(newLocation.x, newLocation.y) &&
+               !oceanMap.isIsland(newLocation.x, newLocation.y);
+    }
+
+    public String getImagePath() {
+        return "file:" + monsterType.toLowerCase() + ".png";
+    }
+
+    public void setDetectionRange(int range) {
+        this.detectionRange = Math.max(1, range);
+    }
+
+    public int getDetectionRange() {
+        return detectionRange;
+    }
+
+    @Override
+    public String toString() {
+        return monsterType + " at (" + location.x + ", " + location.y + ")";
+    }
+}

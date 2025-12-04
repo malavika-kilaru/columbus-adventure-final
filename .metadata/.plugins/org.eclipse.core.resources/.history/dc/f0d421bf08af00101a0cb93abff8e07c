@@ -1,0 +1,9 @@
+package application;
+import javafx.geometry.Point2D;
+
+interface iComposite {
+void move(double dx,double dy);
+void add(Composite component);
+void remove(Composite component);
+Boolean contains(Point2D point);
+}

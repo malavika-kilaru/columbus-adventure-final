@@ -1,0 +1,99 @@
+package application;
+
+import java.awt.Point;
+import java.util.Random;
+
+/**
+ * SeaMonster Class - Represents sea monsters that patrol the ocean
+ */
+public class SeaMonster {
+    private Point location;
+    private OceanMap oceanMap;
+    private Random random;
+    private String monsterType;
+
+    /**
+     * Constructor - Create a new sea monster
+     */
+    public SeaMonster(int x, int y, int dimension, OceanMap oceanMap, String monsterType) {
+        this.location = new Point(x, y);
+        this.oceanMap = oceanMap;
+        this.random = new Random();
+        this.monsterType = monsterType;
+    }
+
+    /**
+     * Get current location of the monster
+     */
+    public Point getLocation() {
+        return location;
+    }
+
+    /**
+     * Get the type of this monster
+     */
+    public String getMonsterType() {
+        return monsterType;
+    }
+
+    /**
+     * Check if monster is at specific coordinates
+     */
+    public boolean isAt(int x, int y) {
+        return location.x == x && location.y == y;
+    }
+
+    /**
+     * Check if monster collides with ship at coordinates
+     */
+    public boolean collidesWith(int x, int y) {
+        return location.x == x && location.y == y;
+    }
+
+    /**
+     * Move the monster randomly (patrol behavior)
+     */
+    public void move() {
+        int direction = random.nextInt(4);
+        Point newLocation = new Point(location.x, location.y);
+
+        switch (direction) {
+            case 0: // North
+                newLocation.y--;
+                break;
+            case 1: // South
+                newLocation.y++;
+                break;
+            case 2: // East
+                newLocation.x++;
+                break;
+            case 3: // West
+                newLocation.x--;
+                break;
+        }
+
+        if (isValidMove(newLocation)) {
+            location = newLocation;
+        }
+    }
+
+    /**
+     * Check if a move is valid (in bounds and not on island)
+     */
+    private boolean isValidMove(Point newLocation) {
+        return oceanMap.isINBounds(newLocation.x, newLocation.y) && 
+               !oceanMap.isIsland(newLocation.x, newLocation.y);
+    }
+
+    /**
+     * Get the image path for this monster
+     */
+    public String getImagePath() {
+        return "file:" + monsterType.toLowerCase() + ".png";
+    }
+
+    @Override
+    public String toString() {
+        return monsterType + " at (" + location.x + ", " + location.y + ")";
+    }
+}

@@ -1,0 +1,217 @@
+package application;
+
+import javafx.application.Application;
+import javafx.scene.Scene;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.VBox;
+import javafx.scene.layout.HBox;
+import javafx.scene.paint.Color;
+import javafx.geometry.Point2D;
+import javafx.scene.input.MouseEvent;
+import javafx.stage.Stage;
+import javafx.event.EventHandler;
+import javafx.scene.shape.Circle;
+import javafx.scene.shape.Rectangle;
+import javafx.scene.control.Label;
+import javafx.geometry.Insets;
+import java.util.ArrayList;
+
+public class GardenLayout extends Application {
+    
+  private Pane gardenPane;
+  private VBox Palette;
+  private iComposite dragging =null;
+  private double lastX;
+  private double lastY;
+  
+  private ArrayList<iComposite> allItems=new ArrayList<>();
+  private ArrayList<FlowerBed> flowerBeds=new ArrayList<>();
+  
+  private String selectedType=null;
+  private Color selectedColor=null;
+  
+  
+  
+    public void start(Stage primaryStage) {
+         HBox root = new HBox ();
+         
+         createPalette(); 
+         
+        gardenPane=new Pane();
+        gardenPane.setPrefSize(800, 600);
+        gardenPane.setStyle("-fx-background-color: lightgreen;");
+        
+        root.getChildren().addAll(palette,gardenPane);
+        
+        Scene scene = new Scene(root, 900, 600);
+        
+        
+    
+    EventHandler<MouseEvent>mouseHandler=new EventHandler<MouseEvent>() {
+    public void handle(MouseEvent event) {
+    	if(event.getEventType()==MouseEvent.MOUSE_PRESSED) {
+    		handleMousePressed(event);
+    	}
+    	
+    		else if(event.getEventType()==MouseEvent.MOUSE_DRAGGED) {
+    			handleMouseDragged(event);
+    		}
+    		else if (event.getEventType()==MouseEvent.MOUSE_RELEASED) {
+    			handleMouseReleased(event);
+    		}
+    		else if(event.getEventType() ==MouseEvent.MOUSE_CLICKED) { 
+        	 handleMouseClicked(event);
+          }
+    	
+    	}
+    
+    };
+    scene.setOnMousePressed(mouseHandler);
+    scene.setOnMouseDragged(mouseHandler);
+    scene.setOnMouseReleased(mouseHandler);
+    scene.setOnMouseClicked(mouseHandler);
+    
+    primaryStage.setTitle("Garden Layout");
+    primaryStage.setScene(scene);
+    primaryStage.show();
+  }
+    private void createPalette() {
+    	palette=new VBox(15);
+    	palette.setPrefwidth(250);
+    	palette.setPadding(new Insets(20));
+    	palette.setStyle("-fx-background-color:white; -fx-border-color:balck; -fx-border-width:2;");
+    }
+    Label instructions=new Label("Instructions:Click on a shape on the left and then create\na new instance of it in the garden.");
+    instructions.setWrapText(true);
+    instructions.setPrefWidth(210);
+    
+    Label flowerLabel=new Label("Flowers");
+    flowerLabel.setStyle("-fx-font-weight:bold;");
+    HBox flowerBox=createFlowerButtons();
+    
+    Label vegetablesLabel=new Label("Vegetables");
+    vegetablesLabel.setStyle("-fx-font-weight:bold;");
+    HBox vegetablesBox=createVegetableButtons();
+    
+    Label flowerBedLabel=new Label("Flower Bed");
+    flowerBedLabel.setStyle("-fx-font-weight:bold;");
+    Rectangle bedSample=new Rectangle(130,120);
+    bedSample.setFill(Color.rgb(139,119,120));
+    bedSample.setStroke(Color.BLACK);
+    bedSample.setStrokeWidth(2);
+    bedSample.setOnMouseClicked(e-> {
+    	selectedType="flowerbed";
+    	selectedColor=null;
+    	});
+    
+    Label treeLabel=new Label("Tree");
+    treeLabel.setStyle("-fx-font-weight:bold;");
+    Circle treeSample=new Circle(35);
+    treeSample.setFill(Color.DARKGREEN);
+    treeSample.setStroke(color.BLACK);
+    treeSample.setStrokeWidth(2);
+    treeSample.setOnMouseClicked(e -> {
+    	selectedType="tree";
+    	selectedColor=null;
+    });
+   palette.getChildren().addAll(
+		   instructions,
+		   flowersLabel,flowersBox,
+		   vegetableLabel,vegetablesBox,
+		   flowerBedLabel,bedSample,
+		   treeLabel,treeSample
+		   ); 
+    }
+private HBox createFlowerButtons() {
+	HBox box=new HBox(10);
+	Color[] colors= {Color.YELLOW,Color.ORANGE,Color.RED,Color.LIGHTGRAY,Color.CHOCOLATE};
+	
+	for(Color color:colors) {
+		Circle c=new Circle(15);
+		c.setFill(color);
+		c.setStroke(Color.BLACK);
+		c.setStrokeWidth(2);
+		c.setOnMouseClicked(e-> {
+			selectedType="flower";
+			selectedColor=color;
+			});
+		box.getChildren().add(c);
+	}
+	return box;
+}
+   private void handleMouseClicked(MouseEvent event) {
+	   if(selectedType!=null && event.getTarget() == gradenPane) {
+		   Point2D pos=new Point2D(event.getX(),event.getY());
+		   
+		   if(selectedType.equals("flower")) {
+			   Flower flower=new Flower(pos,selectedColor,true);
+			   gardenPane.getChildren().add(flower.getCircle());
+			   allItems.add(flower);
+		   }
+		   else if (selectedType.equals("vegetable")) {
+			   Vegetable veg=new Vegetable(pos,selectedColor,true);
+			   gardenPane.getChildren().add(veg.getCircle());
+		        allItems.add(veg);
+		   }
+		   else if (selectedType.equals("tree")) {
+			   Tree tree=new Tree(pos,true);
+			   gardenPane.getChildren().add(tree.getCircle());
+			   allItems.add(tree);
+		   }
+		   else if(selectedType.equals("flowerbed")) {
+			   FlowerBed bed=new FlowerBed(pos,150,120,true);
+			   gardenPane.getChildren().add(0,bed.getRectangle());
+			   allItems.add(bed);
+			   flowerBeds.add(bed);
+		   }
+		 }
+	   }
+   private void handleMousePressed(MouseEvent event) {
+	   lastX=event.getX();
+	   lastY=event.getY();
+	   
+	   if(event.getTarget() instanceof javafx.scene.Node) {
+		   javafx.scene.Node node=(javafx.scene.Node) event.getTarget();
+		   Object userData=node.getUserData();
+		   if(userData instanceof iComposite) {
+			   dragging=(iComposite) userData;
+		   }
+	   
+		   }
+	   }
+   private void handleMouseDragged(MouseEvent event) {
+	   if(dragging!=null) {
+		   double deltaX=event.getX()-lastX;
+		   double deltaY=event.getY()-lastY;
+		   
+		   dragging.move(deltaX, deltaY);;
+		   
+		   lastX=event.getX();
+		   lastY=event.getY();
+	   }
+   }
+   
+   private void handleMouseReleased(MouseEvent event) {
+	   if(dragging !=null) {
+		   Point2D mousePos=new Point2D(event.getX(), event.getY());
+		   
+		   boolean addedToBed=false;
+		   for(FlowerBed bed: flowerBeds) {
+			   if(bed !=dragging && bed.contains(mousePos)) {
+				   bed.add(dragging);
+				   addedToBed=true;
+				   break;
+			   }
+	   }
+    if(!addedToBed) {
+    	for(FlowerBed bed:flowerBeds) {
+    		bed.remove(dragging);;
+    	}
+    }
+    }
+	   dragging=null;
+   }
+    public static void main(String[] args) {
+        launch(args);
+    }
+}

@@ -1,0 +1,93 @@
+package application;
+
+import org.junit.Test;
+import org.junit.Before;
+import static org.junit.Assert.*;
+
+/**
+ * ShipTest - JUnit tests for Ship class
+ */
+public class ShipTest {
+    
+    private Ship ship;
+    private OceanMap oceanMap;
+    
+    @Before
+    public void setUp() {
+        // Reset singleton before each test
+        OceanMap.instance = null;
+        oceanMap = OceanMap.getInstance(20);
+        ship = new Ship(1, 1, 20);
+    }
+    
+    /**
+     * Test 1: Ship initializes at correct location
+     */
+    @Test
+    public void testShipInitialization() {
+        assertEquals(1, ship.getShipLocation().x);
+        assertEquals(1, ship.getShipLocation().y);
+    }
+    
+    /**
+     * Test 2: Ship moves east correctly
+     */
+    @Test
+    public void testShipMoveEast() {
+        ship.goEast(oceanMap);
+        assertEquals(2, ship.getShipLocation().x);
+    }
+    
+    /**
+     * Test 3: Ship moves west correctly
+     */
+    @Test
+    public void testShipMoveWest() {
+        ship.goWest(oceanMap);
+        assertEquals(0, ship.getShipLocation().x);
+    }
+    
+    /**
+     * Test 4: Ship moves north correctly
+     */
+    @Test
+    public void testShipMoveNorth() {
+        ship.goNorth(oceanMap);
+        assertEquals(0, ship.getShipLocation().y);
+    }
+    
+    /**
+     * Test 5: Ship moves south correctly
+     */
+    @Test
+    public void testShipMoveSouth() {
+        ship.goSouth(oceanMap);
+        assertEquals(2, ship.getShipLocation().y);
+    }
+    
+    /**
+     * Test 6: Ship doesn't go past west boundary
+     */
+    @Test
+    public void testShipBoundaryWest() {
+        // Try to move west 10 times
+        for (int i = 0; i < 10; i++) {
+            ship.goWest(oceanMap);
+        }
+        // Should be stuck at x=0 (boundary)
+        assertEquals(0, ship.getShipLocation().x);
+    }
+    
+    /**
+     * Test 7: Ship doesn't go past east boundary
+     */
+    @Test
+    public void testShipBoundaryEast() {
+        // Try to move east many times
+        for (int i = 0; i < 50; i++) {
+            ship.goEast(oceanMap);
+        }
+        // Should be stuck at x=19 (boundary for 20x20 grid)
+        assertEquals(19, ship.getShipLocation().x);
+    }
+}

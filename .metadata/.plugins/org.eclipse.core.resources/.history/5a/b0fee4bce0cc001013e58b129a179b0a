@@ -1,0 +1,148 @@
+package application;
+
+import java.awt.Point;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * GameController - Manages overall game logic and state
+ */
+public class GameController {
+    private Ship ship;
+    private Treasure treasure;
+    private List<PirateShip> pirates;
+    private List<SeaMonster> monsters;
+    private GameState currentState;
+    private int score;
+
+    /**
+     * Constructor - Initialize game controller
+     */
+    public GameController(Ship ship, Treasure treasure, OceanMap oceanMap) {
+        this.ship = ship;
+        this.treasure = treasure;
+        this.pirates = new ArrayList<>();
+        this.monsters = new ArrayList<>();
+        this.currentState = GameState.PLAYING;
+        this.score = 0;
+    }
+
+    /**
+     * Add a pirate to the game
+     */
+    public void addPirate(PirateShip pirate) {
+        pirates.add(pirate);
+    }
+
+    /**
+     * Add a sea monster to the game
+     */
+    public void addMonster(SeaMonster monster) {
+        monsters.add(monster);
+    }
+
+    /**
+     * Update all game entities each turn
+     */
+    public void update() {
+        if (currentState == GameState.PLAYING) {
+            updateMonsters();
+            checkWinCondition();
+            checkLoseCondition();
+        }
+    }
+
+    /**
+     * Update all monsters' positions
+     */
+    private void updateMonsters() {
+        for (SeaMonster monster : monsters) {
+            monster.move();
+        }
+    }
+
+    /**
+     * Check if player has won
+     */
+    public void checkWinCondition() {
+        Point shipLoc = ship.getShipLocation();
+        if (treasure.isAt((int)shipLoc.x, (int)shipLoc.y)) {
+            currentState = GameState.WIN;
+            score += 1000;
+            System.out.println("YOU WIN! Found the treasure!");
+        }
+    }
+
+    /**
+     * Check if player has lost
+     */
+    public void checkLoseCondition() {
+        Point shipLoc = ship.getShipLocation();
+        
+        for (PirateShip pirate : pirates) {
+            if (pirate.getLocation().equals(shipLoc)) {
+                currentState = GameState.LOSE;
+                System.out.println("YOU LOSE! Caught by pirate!");
+                return;
+            }
+        }
+
+        for (SeaMonster monster : monsters) {
+            if (monster.collidesWith((int)shipLoc.x, (int)shipLoc.y)) {
+                currentState = GameState.LOSE;
+                System.out.println("YOU LOSE! Hit by sea monster!");
+                return;
+            }
+        }
+    }
+
+    /**
+     * Get current game state
+     */
+    public GameState getCurrentState() {
+        return currentState;
+    }
+
+    /**
+     * Set game state
+     */
+    public void setGameState(GameState state) {
+        this.currentState = state;
+    }
+
+    /**
+     * Get current score
+     */
+    public int getScore() {
+        return score;
+    }
+
+    /**
+     * Reset game to initial state
+     */
+    public void resetGame() {
+        currentState = GameState.PLAYING;
+        score = 0;
+    }
+
+    /**
+     * Get the treasure
+     */
+    public Treasure getTreasure() {
+        return treasure;
+    }
+
+    /**
+     * Get all sea monsters
+     */
+    public List<SeaMonster> getMonsters() {
+        return monsters;
+    }
+
+    /**
+     * Get all pirates
+     */
+    public List<PirateShip> getPirates() {
+        return pirates;
+    }
+}

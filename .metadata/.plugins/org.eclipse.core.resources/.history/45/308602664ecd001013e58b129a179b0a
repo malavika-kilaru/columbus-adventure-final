@@ -1,0 +1,22 @@
+package application;
+
+import org.junit.Test;
+import static org.junit.Assert.*;
+import java.awt.Point;
+
+public class ShipTest {
+    @Test
+    public void testShipInitialization() {
+        Ship ship = new Ship(1, 1, 20);
+        assertEquals(1, ship.getShipLocation().x);
+        assertEquals(1, ship.getShipLocation().y);
+    }
+    
+    @Test
+    public void testShipMoveEast() {
+        OceanMap map = OceanMap.getInstance(20);
+        Ship ship = new Ship(5, 5, 20);
+        ship.goEast(map);
+        assertEquals(6, ship.getShipLocation().x);
+    }
+}

@@ -1,0 +1,138 @@
+package application;
+
+import java.awt.Point;
+import java.util.Random;
+
+/**
+ * OceanMap - Singleton Pattern Implementation
+ * 
+ * Represents the ocean grid with islands and ships.
+ * Uses Singleton pattern: Only ONE instance of OceanMap exists.
+ * Access anywhere using OceanMap.getInstance()
+ * 
+ * Design Pattern: SINGLETON
+ * Ensures single global map instance accessible from any class.
+ * 
+ * @author Student
+ * @version 1.0
+ */
+public class OceanMap {
+    private boolean[][] myGrid;
+    private int dimension;
+    private Ship ship;
+    private Random random;
+    private static OceanMap instance; // SINGLETON: Static instance
+
+    /**
+     * Private constructor - prevents direct instantiation
+     * Only called once when getInstance() is first called
+     * @param dimension Size of the ocean grid
+     */
+    private OceanMap(int dimension) {
+        this.dimension = dimension;
+        this.myGrid = new boolean[dimension][dimension];
+        this.random = new Random();
+
+        // Initialize all cells as water (false)
+        for (int i = 0; i < dimension; i++) {
+            for (int j = 0; j < dimension; j++) {
+                myGrid[i][j] = false;
+            }
+        }
+    }
+
+    /**
+     * Get or create singleton instance
+     * If instance doesn't exist, create it with given dimension
+     * If instance exists, return the existing one
+     * 
+     * @param dimension Size of ocean grid (used only first time)
+     * @return Single OceanMap instance
+     */
+    public static OceanMap getInstance(int dimension) {
+        if (instance == null) {
+            instance = new OceanMap(dimension);
+        }
+        return instance;
+    }
+
+    /**
+     * Get existing singleton instance
+     * Use this when you just need to access the map
+     * 
+     * @return Single OceanMap instance
+     */
+    public static OceanMap getInstance() {
+        return instance;
+    }
+
+    /**
+     * Get the grid array
+     * @return 2D boolean array representing islands
+     */
+    public boolean[][] getMap() {
+        return myGrid;
+    }
+
+    /**
+     * Register the ship on this map
+     * @param ship The player's ship
+     */
+    public void setShip(Ship ship) {
+        this.ship = ship;
+    }
+  
+    /**
+     * Get current location of the ship
+     * @return Point with ship coordinates, or null if no ship
+     */
+    public Point getShipLocation() {
+        if (ship != null) {
+            return ship.getShipLocation();
+        }
+        return null;
+    }
+  
+    /**
+     * Randomly place islands on the map
+     * Ensures islands don't overlap with ship starting location
+     * 
+     * @param count Number of islands to place
+     */
+    public void placeIslands(int count) {
+        int islandsPlaced = 0;
+        while (islandsPlaced < count) {
+            int x = random.nextInt(dimension);
+            int y = random.nextInt(dimension);
+
+            // Check location is water and not on ship
+            if (!myGrid[x][y] && (ship == null || (x != ship.getShipLocation().x || y != ship.getShipLocation().y))) {
+                myGrid[x][y] = true; // Mark as island
+                islandsPlaced++;
+            }
+        }
+    }
+
+    /**
+     * Check if a location contains an island
+     * @param x X coordinate
+     * @param y Y coordinate
+     * @return true if island at location
+     */
+    public Boolean isIsland(int x, int y) {
+        if (x >= 0 && x < dimension && y >= 0 && y < dimension) {
+            return myGrid[x][y];
+        }
+        return false;
+    }
+
+    /**
+     * Check if coordinates are within map bounds
+     * @param x X coordinate
+     * @param y Y coordinate
+     * @return true if coordinates are valid
+     */
+    public boolean isINBounds(int x, int y) {
+        return x >= 0 && x < dimension && y >= 0 && y < dimension;
+    }
+}

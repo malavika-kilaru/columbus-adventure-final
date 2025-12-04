@@ -1,0 +1,78 @@
+package application;
+
+import javafx.application.Application;
+import javafx.scene.Scene;
+import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
+import javafx.geometry.Point2D;
+import javafx.scene.input.MouseEvent;
+import javafx.stage.Stage;
+
+public class GardenLayout extends Application {
+    
+  private Pane root;
+  private Composite selectedItem=null;
+  private Point2D lastMousePos=null;
+  
+  private Flower flower;
+  private FlowerBed flowerBed;
+  
+    public void start(Stage primaryStage) {
+         root = new Pane();
+        root.setPrefSize(800, 600);
+        root.setStyle("-fx-background-color: lightgreen;");
+        
+        Scene scene = new Scene(root, 800, 600);
+        
+        flowerBed=new FlowerBed(new Point2D(400,300),200,150);
+        root.getChildren().add(flowerBed.getRectangle());
+        
+        flower=new Flower(new Point2D(150,150),Color.RED,true);
+        root.getChildren().add(flower.getCircle());
+        
+        scene.setOnMousePressed(this::handleMousePressed);
+        scene.setOnMouseDragged(this::handleMouseDragged);
+        scene.setOnMouseReleased(this::handleMouseReleased);
+        
+        primaryStage.setTitle("Garden Layout");
+        primaryStage.setScene(scene);
+        primaryStage.show();
+    }
+    
+    private void handleMousePressed(MouseEvent event) {
+    	Point2D mousePos=new Point2D(event.getX(),event.getY());
+    	
+    	if(flower.contains(mousePos)) {
+    		selectedItem=flower;
+    	}
+    	else if(flowerBed.contains(mousePos)) {
+    		selectedItem=flowerBed;
+    	}
+    	lastMousePos=mousePos;
+    }
+    
+         private void handleMouseDragged(MouseEvent event) {
+    	if(selectedItem !=null && lastMousePos!=null) {
+    		Point2D currentPos =new Point2D(event.getX(),event.getY());
+    		double dx=currentPos.getX()-lastMousePos.getX();
+    		double dy=currentPos.getY()-lastMousePos.getY();
+    		
+    		selectedItem.move(dx,dy);
+    		lastMousePos=currentPos;
+         	}
+        }
+         
+         private void handleMouseReleased(MouseEvent event) {
+        	 if(selectedItem!=null) {
+        		 Point2D mousePos=new Point2D(event.getX(),event.getY());
+        		 if(selectedItem ==flower&&flowerBed.contains(mousePos)) {
+        			 flowerBed.add(flower);
+        		 }
+    	}
+        	 selectedItem=null;
+        	 lastMousePos=null;
+    }
+    public static void main(String[] args) {
+        launch(args);
+    }
+}

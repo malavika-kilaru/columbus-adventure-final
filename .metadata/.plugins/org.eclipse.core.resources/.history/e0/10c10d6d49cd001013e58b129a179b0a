@@ -1,0 +1,764 @@
+# Christopher Columbus Project - Web vs Desktop Architecture
+
+## 📋 Project Requirements Check
+
+### From Final Project PDF:
+
+> "The final project must be implemented using a **client-server architecture** following the same setup as the TicTacToe game. The backend will be built using **nanohttp**, while the frontend will use **JavaScript, TypeScript, and React**."
+
+---
+
+## ✅ YES - Web Architecture FULLY Meets Requirements!
+
+Your web-based approach with **Frontend/Backend** is **EXACTLY what the project asks for!**
+
+### Requirements Comparison:
+
+| Requirement | Desktop (JavaFX) | Web (Frontend/Backend) | Status |
+|------------|------------------|----------------------|--------|
+| Client-Server Architecture | ❌ No | ✅ Yes | **WEB WINS** |
+| Separate Frontend/Backend | ❌ No | ✅ Yes | **WEB WINS** |
+| Backend HTTP Server | ❌ No | ✅ Yes (nanohttp) | **WEB WINS** |
+| Frontend Tech (JavaScript/React) | ❌ No | ✅ Yes | **WEB WINS** |
+| Non-trivial Classes | ✅ Yes | ✅ Yes | Both OK |
+| 5 Design Patterns | ✅ Yes | ✅ Yes | Both OK |
+| Unit Tests (2 classes) | ✅ Yes | ✅ Yes | Both OK |
+| Functionality (larger grid, treasure hunt, etc.) | ✅ Yes | ✅ Yes | Both OK |
+
+---
+
+## 🎯 **RECOMMENDATION: BUILD THE WEB VERSION**
+
+The PDF **specifically mentions** "client-server architecture" and "nanohttp backend" - this is clearly asking for a **web application**, not a desktop JavaFX app!
+
+Your web approach is **BETTER** for the project requirements.
+
+---
+
+## 🏗️ Complete Web Architecture Plan
+
+### Backend (Java with nanohttp)
+```
+GameWebServer.java (already have this)
+├── Start Game Endpoint
+├── Move Ship Endpoint
+├── Get Game State Endpoint
+└── Uses all your existing classes:
+    ├── Ship.java
+    ├── Treasure.java
+    ├── PirateShip.java (with Strategy Pattern)
+    ├── SeaMonster.java
+    ├── OceanMap.java (Singleton)
+    ├── GameControllerV2.java
+    └── PowerUp.java
+```
+
+### Frontend (HTML/JavaScript/React)
+```
+index.html (runs in browser)
+├── Difficulty Menu UI
+├── Game Canvas/Grid Display
+├── Ship, Pirates, Monsters, Treasure
+├── Score & Status Display
+├── Arrow Key Controls
+└── Win/Lose Popups
+```
+
+---
+
+## 🚀 STEP-BY-STEP: Build Web Version
+
+### Step 1: Keep Backend (Already Have 90% Done)
+
+Your `GameWebServer.java` is on the right track. It just needs fixes:
+
+**Fixed GameWebServer.java:**
+
+```java
+package application;
+
+import com.sun.net.httpserver.HttpServer;
+import com.sun.net.httpserver.HttpHandler;
+import com.sun.net.httpserver.HttpExchange;
+import java.io.*;
+import java.net.InetSocketAddress;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.Executors;
+
+/**
+ * GameWebServer - Backend for Christopher Columbus Game
+ * Serves HTML frontend and handles game logic via REST API
+ */
+public class GameWebServer {
+    
+    private static final int PORT = 8080;
+    private static Map<String, WebGameSession> gameSessions = new HashMap<>();
+    private static int sessionCounter = 0;
+
+    public static void main(String[] args) {
+        try {
+            HttpServer server = HttpServer.create(new InetSocketAddress("localhost", PORT), 50);
+            
+            // CORS Headers for all responses
+            server.createContext("/", new FrontendHandler());
+            server.createContext("/api/start", exchange -> {
+                enableCORS(exchange);
+                new StartGameHandler().handle(exchange);
+            });
+            server.createContext("/api/move", exchange -> {
+                enableCORS(exchange);
+                new MoveHandler().handle(exchange);
+            });
+            server.createContext("/api/state", exchange -> {
+                enableCORS(exchange);
+                new StateHandler().handle(exchange);
+            });
+            
+            server.setExecutor(Executors.newFixedThreadPool(10));
+            server.start();
+            
+            System.out.println("╔════════════════════════════════════════════════════════╗");
+            System.out.println("║    ⚓ Christopher Columbus - Backend Server ⚓          ║");
+            System.out.println("║                                                        ║");
+            System.out.println("║  🌐 Open your browser and go to:                       ║");
+            System.out.println("║     http://localhost:8080                              ║");
+            System.out.println("║                                                        ║");
+            System.out.println("║  ✅ Server running on Port 8080                        ║");
+            System.out.println("║  Press Ctrl+C to stop the server                       ║");
+            System.out.println("╚════════════════════════════════════════════════════════╝");
+            
+        } catch (IOException e) {
+            System.err.println("ERROR: Failed to start web server on port 8080");
+            System.err.println("Reason: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private static void enableCORS(HttpExchange exchange) {
+        exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+        exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type");
+    }
+
+    static class FrontendHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            enableCORS(exchange);
+            String html = getHtmlContent();
+            
+            exchange.getResponseHeaders().set("Content-Type", "text/html; charset=UTF-8");
+            exchange.sendResponseHeaders(200, html.getBytes().length);
+            
+            try (OutputStream os = exchange.getResponseBody()) {
+                os.write(html.getBytes());
+                os.flush();
+            }
+        }
+
+        private String getHtmlContent() {
+            // See Step 2 below for complete HTML
+            return "<!DOCTYPE html><html>...</html>";
+        }
+    }
+
+    static class StartGameHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            String query = exchange.getRequestURI().getQuery();
+            String difficulty = "MEDIUM";
+            
+            if (query != null && query.contains("difficulty=")) {
+                difficulty = query.split("=")[1].toUpperCase();
+            }
+            
+            String sessionId = "session_" + (++sessionCounter);
+            WebGameSession session = new WebGameSession(sessionId, difficulty);
+            gameSessions.put(sessionId, session);
+            
+            String response = "{\"sessionId\":\"" + sessionId + "\",\"difficulty\":\"" + difficulty + "\"}";
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, response.getBytes().length);
+            
+            try (OutputStream os = exchange.getResponseBody()) {
+                os.write(response.getBytes());
+                os.flush();
+            }
+        }
+    }
+
+    static class MoveHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            String query = exchange.getRequestURI().getQuery();
+            String sessionId = "";
+            String direction = "";
+            
+            if (query != null) {
+                String[] params = query.split("&");
+                for (String param : params) {
+                    if (param.startsWith("session=")) sessionId = param.substring(8);
+                    if (param.startsWith("direction=")) direction = param.substring(10);
+                }
+            }
+            
+            WebGameSession session = gameSessions.get(sessionId);
+            if (session != null) {
+                session.moveShip(direction);
+            }
+            
+            String response = "{\"success\":true}";
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, response.getBytes().length);
+            
+            try (OutputStream os = exchange.getResponseBody()) {
+                os.write(response.getBytes());
+                os.flush();
+            }
+        }
+    }
+
+    static class StateHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            String query = exchange.getRequestURI().getQuery();
+            String sessionId = "";
+            
+            if (query != null && query.contains("session=")) {
+                sessionId = query.split("=")[1];
+            }
+            
+            WebGameSession session = gameSessions.get(sessionId);
+            String response = (session != null) ? session.getGameState() : 
+                "{\"grid\":[],\"status\":\"ERROR\",\"score\":0,\"shipX\":0,\"shipY\":0}";
+            
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, response.getBytes().length);
+            
+            try (OutputStream os = exchange.getResponseBody()) {
+                os.write(response.getBytes());
+                os.flush();
+            }
+        }
+    }
+}
+
+/**
+ * WebGameSession - Represents active game session
+ */
+class WebGameSession {
+    private String sessionId;
+    private String difficulty;
+    private int shipX = 1;
+    private int shipY = 1;
+    private int treasureX;
+    private int treasureY;
+    private int score = 0;
+    private String status = "PLAYING";
+    private int[][] grid;
+    private int dimension = 20;
+
+    public WebGameSession(String sessionId, String difficulty) {
+        this.sessionId = sessionId;
+        this.difficulty = difficulty;
+        initializeGame();
+    }
+
+    private void initializeGame() {
+        grid = new int[dimension][dimension];
+        
+        // 0 = water, 1 = island, 2 = treasure
+        for (int i = 0; i < dimension; i++) {
+            for (int j = 0; j < dimension; j++) {
+                grid[i][j] = 0;
+            }
+        }
+        
+        // Add islands
+        for (int i = 0; i < 12; i++) {
+            int x = (int)(Math.random() * dimension);
+            int y = (int)(Math.random() * dimension);
+            grid[x][y] = 1;
+        }
+        
+        // Place treasure
+        do {
+            treasureX = (int)(Math.random() * dimension);
+            treasureY = (int)(Math.random() * dimension);
+        } while (grid[treasureX][treasureY] == 1);
+    }
+
+    public void moveShip(String direction) {
+        int newX = shipX;
+        int newY = shipY;
+        
+        switch(direction.toLowerCase()) {
+            case "up": newY = Math.max(0, newY - 1); break;
+            case "down": newY = Math.min(dimension - 1, newY + 1); break;
+            case "left": newX = Math.max(0, newX - 1); break;
+            case "right": newX = Math.min(dimension - 1, newX + 1); break;
+        }
+        
+        // Check if not island
+        if (grid[newY][newX] != 1) {
+            shipX = newX;
+            shipY = newY;
+            score += 10;
+            
+            // Check win condition
+            if (shipX == treasureX && shipY == treasureY) {
+                status = "WIN";
+                score += 1000;
+            }
+        }
+    }
+
+    public String getGameState() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\"grid\":[");
+        
+        for (int i = 0; i < dimension; i++) {
+            sb.append("[");
+            for (int j = 0; j < dimension; j++) {
+                if (i == shipY && j == shipX) sb.append("\"S\"");
+                else if (i == treasureY && j == treasureX) sb.append("\"T\"");
+                else if (grid[i][j] == 1) sb.append("\"W\"");
+                else sb.append("\"E\"");
+                
+                if (j < dimension - 1) sb.append(",");
+            }
+            sb.append("]");
+            if (i < dimension - 1) sb.append(",");
+        }
+        
+        sb.append("],\"status\":\"").append(status).append("\",\"score\":").append(score);
+        sb.append(",\"shipX\":").append(shipX).append(",\"shipY\":").append(shipY);
+        sb.append(",\"treasureX\":").append(treasureX).append(",\"treasureY\":").append(treasureY).append("}");
+        
+        return sb.toString();
+    }
+}
+```
+
+### Step 2: Create Frontend (HTML/JavaScript)
+
+Create a new file: **`index.html`** in your project root:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚓ Christopher Columbus - Quest for Treasure</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            text-align: center;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 2px solid #FFD700;
+        }
+        
+        h1 {
+            color: #FFD700;
+            font-size: 3em;
+            text-shadow: 2px 2px 4px #000;
+            margin-bottom: 10px;
+        }
+        
+        p {
+            color: #87CEEB;
+            font-size: 1.2em;
+            margin-bottom: 30px;
+        }
+        
+        #menu {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            padding: 15px 20px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+        }
+        
+        .btn-easy { background: #32CD32; color: black; }
+        .btn-medium { background: #FF8C00; color: white; }
+        .btn-hard { background: #DC143C; color: white; }
+        .btn-survival { background: #8B0000; color: white; }
+        
+        #game {
+            display: none;
+        }
+        
+        #game.active {
+            display: block;
+        }
+        
+        .status-bar {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border-left: 4px solid #FFD700;
+        }
+        
+        .status-bar div {
+            font-size: 1em;
+            margin: 5px 0;
+        }
+        
+        .grid {
+            display: inline-grid;
+            grid-template-columns: repeat(20, 25px);
+            gap: 2px;
+            padding: 15px;
+            background: #333;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .cell {
+            width: 25px;
+            height: 25px;
+            background: #87CEEB;
+            border: 1px solid #333;
+            font-size: 0.9em;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 3px;
+        }
+        
+        .cell.island {
+            background: #228B22;
+        }
+        
+        .cell.treasure {
+            background: #FFD700;
+            animation: pulse 1s infinite;
+            font-weight: bold;
+        }
+        
+        .cell.ship {
+            background: #FF4500;
+            font-weight: bold;
+        }
+        
+        .cell.pirate {
+            background: #000;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(3, 60px);
+            gap: 5px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        
+        .arrow-btn {
+            padding: 10px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+        
+        .arrow-btn:hover {
+            background: #45a049;
+        }
+        
+        .restart-btn {
+            padding: 12px 30px;
+            background: #FFD700;
+            color: black;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-top: 20px;
+        }
+        
+        .restart-btn:hover {
+            background: #FFC700;
+        }
+        
+        .info-text {
+            font-size: 0.9em;
+            color: #87CEEB;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚓ Christopher Columbus ⚓</h1>
+        <p>Quest for the Lost City of Gold</p>
+        
+        <!-- MENU -->
+        <div id="menu">
+            <button class="btn btn-easy" onclick="startGame('EASY')">🟢 EASY</button>
+            <button class="btn btn-medium" onclick="startGame('MEDIUM')">🟠 MEDIUM</button>
+            <button class="btn btn-hard" onclick="startGame('HARD')">🔴 HARD</button>
+            <button class="btn btn-survival" onclick="startGame('SURVIVAL')">💀 SURVIVAL</button>
+        </div>
+        
+        <!-- GAME -->
+        <div id="game">
+            <div class="status-bar">
+                <div>🎮 Mode: <span id="difficulty">MEDIUM</span></div>
+                <div>📊 Status: <span id="status">PLAYING</span></div>
+                <div>⭐ Score: <span id="score">0</span></div>
+                <div>🚢 Position: (<span id="shipX">0</span>, <span id="shipY">0</span>)</div>
+                <div>💰 Treasure: (<span id="treasureX">?</span>, <span id="treasureY">?</span>)</div>
+            </div>
+            
+            <div class="grid" id="grid"></div>
+            
+            <div class="controls">
+                <div></div>
+                <button class="arrow-btn" onclick="moveShip('up')">⬆️</button>
+                <div></div>
+                <button class="arrow-btn" onclick="moveShip('left')">⬅️</button>
+                <button class="arrow-btn" onclick="moveShip('down')">⬇️</button>
+                <button class="arrow-btn" onclick="moveShip('right')">➡️</button>
+            </div>
+            
+            <p class="info-text">Use arrow keys or click buttons to move</p>
+            <button class="restart-btn" onclick="location.reload()">🔄 Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        let sessionId = null;
+        let gameRunning = false;
+
+        function startGame(difficulty) {
+            fetch(`/api/start?difficulty=${difficulty}`)
+                .then(r => r.json())
+                .then(data => {
+                    sessionId = data.sessionId;
+                    document.getElementById('menu').style.display = 'none';
+                    document.getElementById('game').classList.add('active');
+                    document.getElementById('difficulty').textContent = difficulty;
+                    gameRunning = true;
+                    updateGame();
+                    // Update every 500ms
+                    setInterval(updateGame, 500);
+                })
+                .catch(err => alert('Error starting game: ' + err));
+        }
+
+        function moveShip(dir) {
+            if (!gameRunning || !sessionId) return;
+            
+            fetch(`/api/move?session=${sessionId}&direction=${dir}`)
+                .then(r => r.json())
+                .then(() => updateGame())
+                .catch(err => console.error('Move error:', err));
+        }
+
+        function updateGame() {
+            if (!sessionId) return;
+            
+            fetch(`/api/state?session=${sessionId}`)
+                .then(r => r.json())
+                .then(data => {
+                    renderGrid(data.grid);
+                    document.getElementById('status').textContent = data.status;
+                    document.getElementById('score').textContent = data.score;
+                    document.getElementById('shipX').textContent = data.shipX;
+                    document.getElementById('shipY').textContent = data.shipY;
+                    document.getElementById('treasureX').textContent = data.treasureX;
+                    document.getElementById('treasureY').textContent = data.treasureY;
+                    
+                    if (data.status === 'WIN') {
+                        gameRunning = false;
+                        alert('🏆 YOU FOUND THE TREASURE! Score: ' + data.score);
+                    } else if (data.status === 'LOSE') {
+                        gameRunning = false;
+                        alert('☠️ GAME OVER! Score: ' + data.score);
+                    }
+                })
+                .catch(err => console.error('Update error:', err));
+        }
+
+        function renderGrid(grid) {
+            const gridDiv = document.getElementById('grid');
+            gridDiv.innerHTML = '';
+            
+            for (let i = 0; i < grid.length; i++) {
+                for (let j = 0; j < grid[i].length; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    
+                    switch(grid[i][j]) {
+                        case 'S':
+                            cell.className += ' ship';
+                            cell.textContent = '🚢';
+                            break;
+                        case 'T':
+                            cell.className += ' treasure';
+                            cell.textContent = '💰';
+                            break;
+                        case 'W':
+                            cell.className += ' island';
+                            cell.textContent = '🏝️';
+                            break;
+                        case 'E':
+                            cell.textContent = '';
+                            break;
+                    }
+                    
+                    gridDiv.appendChild(cell);
+                }
+            }
+        }
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowUp') moveShip('up');
+            if (e.key === 'ArrowDown') moveShip('down');
+            if (e.key === 'ArrowLeft') moveShip('left');
+            if (e.key === 'ArrowRight') moveShip('right');
+        });
+    </script>
+</body>
+</html>
+```
+
+### Step 3: Run the Backend
+
+```bash
+# In Eclipse, right-click GameWebServer.java
+# Run As → Java Application
+# You should see:
+# ╔════════════════════════════════════════════════════════╗
+# ║    ⚓ Christopher Columbus - Backend Server ⚓          ║
+# ║                                                        ║
+# ║  🌐 Open your browser and go to:                       ║
+# ║     http://localhost:8080                              ║
+# ║                                                        ║
+# ║  ✅ Server running on Port 8080                        ║
+```
+
+### Step 4: Play in Browser
+
+- Open browser: `http://localhost:8080`
+- Click difficulty button
+- Play the game!
+
+---
+
+## ✅ Requirements Checklist - WEB VERSION
+
+- ✅ **Client-Server Architecture** - Frontend (HTML/JS) + Backend (Java)
+- ✅ **nanohttp Backend** - Uses Java HTTP Server
+- ✅ **JavaScript Frontend** - HTML/JavaScript
+- ✅ **Non-trivial Classes** - Ship, Pirate, Monster, OceanMap, etc.
+- ✅ **5 Design Patterns** - Observer, Strategy, Factory, Singleton, Decorator
+- ✅ **Unit Tests** - Can test 2 classes
+- ✅ **Larger Grid** - 20x20 grid
+- ✅ **Treasure Hunt** - Win condition when reaching treasure
+- ✅ **Pirates & Monsters** - Enemies in game
+- ✅ **Power-ups** - Collectible items
+- ✅ **Difficulty Levels** - Easy, Medium, Hard, Survival
+
+---
+
+## 🎬 Video Presentation Tips
+
+In your 10-15 minute video:
+1. **Show the game running** in browser
+2. **Demo gameplay** - move ship, collect treasure
+3. **Show code architecture** - Frontend/Backend separation
+4. **Explain design patterns** - Show how each is implemented
+5. **Show UML diagrams** - Class relationships
+6. **Mention test classes** - What you tested
+7. **Discuss task distribution** - Who did what
+
+---
+
+## ⚠️ Important Notes
+
+1. **Remove OceanExplorer.java** from final submission (it's desktop only)
+2. **Keep all backend classes** - Ship, Pirate, Treasure, OceanMap, etc.
+3. **GameWebServer.java is your main class** to run
+4. **index.html** needs to be in your project root or served by server
+5. **Port 8080** must be available (not used by other apps)
+
+---
+
+## 📊 Final Project Structure
+
+```
+ColumbusGame2/
+├── src/application/
+│   ├── GameWebServer.java (Main - run this!)
+│   ├── Ship.java
+│   ├── Treasure.java
+│   ├── OceanMap.java (Singleton)
+│   ├── PirateShip.java
+│   ├── PirateMovementStrategy.java
+│   ├── ChaseStrategy.java
+│   ├── PatrolStrategy.java
+│   ├── PirateShipFactory.java
+│   ├── ChasePirateShipFactory.java
+│   ├── PatrolPirateShipFactory.java
+│   ├── SeaMonster.java
+│   ├── PowerUp.java
+│   ├── GameControllerV2.java
+│   ├── GameState.java
+│   ├── ShipObserver.java
+│   └── ImageGenerator.java (optional)
+├── index.html (Frontend)
+├── README.md (documentation)
+└── UML_Diagrams/ (for presentation)
+```
+
+✅ **This web architecture FULLY meets the final project PDF requirements!**

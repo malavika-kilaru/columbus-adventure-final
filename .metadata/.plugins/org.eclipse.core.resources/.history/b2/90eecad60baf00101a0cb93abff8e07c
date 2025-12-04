@@ -1,0 +1,43 @@
+package application;
+
+import javafx.scene.shape.Circle;
+import javafx.scene.paint.Color;
+import javafx.geometry.Point2D;
+
+class Flower implements iComposite {
+	private Circle circle;
+	private boolean movable;
+	
+	public Flower(Point2D position,Color color,boolean movable) {
+		this.movable=movable;
+		
+		circle=new Circle();
+		circle.setCenterX(position.getX());
+		circle.setCenterY(position.getY());
+		circle.setRadius(15);
+		circle.setFill(color);
+		circle.setStroke(Color.BLACK);
+		circle.setStrokeWidth(2);
+		
+		circle.setUserData(this);
+	}
+ public void move(double dx,double dy) {
+	 if(movable) {
+		 circle.setCenterX(circle.getCenterX()+dx);;
+		 circle.setCenterY(circle.getCenterY()+dy);
+	 }
+ }
+ public void add(iComposite component) {
+ }
+ public void remove(iComposite component) {
+}
+public boolean contains(Point2D point) {
+	double distance=Math.sqrt(
+			Math.pow(point.getX()-circle.getCenterX(),2) +
+			Math.pow(point.getY()-circle.getCenterY(),2));
+	return distance <=circle.getRadius();
+}
+public Circle getCircle() {
+	return circle;
+   }
+}

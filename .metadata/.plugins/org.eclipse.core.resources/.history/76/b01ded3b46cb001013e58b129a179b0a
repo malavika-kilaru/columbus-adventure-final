@@ -1,0 +1,179 @@
+ppackage application;
+
+import java.awt.Point;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * GameController - Manages overall game logic and state
+ * 
+ * Responsibilities:
+ * - Track game state (playing, won, lost, paused)
+ * - Update all game entities (pirates, monsters)
+ * - Check win/lose conditions
+ * - Manage scoring
+ * 
+ * @author Student
+ * @version 1.0
+ */
+public class GameController {
+    private Ship ship;
+    private Treasure treasure;
+    private List<PirateShip> pirates;
+    private List<SeaMonster> monsters;
+    private OceanMap oceanMap;
+    private GameState currentState;
+    private int score;
+
+    /**
+     * Constructor - Initialize game controller
+     * 
+     * @param ship Player's ship
+     * @param treasure Treasure to find
+     * @param oceanMap The ocean map
+     */
+    public GameController(Ship ship, Treasure treasure, OceanMap oceanMap) {
+        this.ship = ship;
+        this.treasure = treasure;
+        this.oceanMap = oceanMap;
+        this.pirates = new ArrayList<>();
+        this.monsters = new ArrayList<>();
+        this.currentState = GameState.PLAYING;
+        this.score = 0;
+    }
+
+    /**
+     * Add a pirate to the game
+     * @param pirate PirateShip to add
+     */
+    public void addPirate(PirateShip pirate) {
+        pirates.add(pirate);
+    }
+
+    /**
+     * Add a sea monster to the game
+     * @param monster SeaMonster to add
+     */
+    public void addMonster(SeaMonster monster) {
+        monsters.add(monster);
+    }
+
+    /**
+     * Update all game entities each turn
+     * Called every game loop iteration
+     */
+    public void update() {
+        if (currentState == GameState.PLAYING) {
+            // Update all moving entities
+            updateMonsters();
+            
+            // Check if game has ended
+            checkWinCondition();
+            checkLoseCondition();
+        }
+    }
+
+    /**
+     * Update all monsters' positions
+     */
+    private void updateMonsters() {
+        for (SeaMonster monster : monsters) {
+            monster.move();
+        }
+    }
+
+    /**
+     * Check if player has won
+     * Win condition: Ship reaches treasure location
+     */
+    public void checkWinCondition() {
+        Point shipLoc = ship.getShipLocation();
+        if (treasure.isAt((int)shipLoc.x, (int)shipLoc.y)) {
+            currentState = GameState.WIN;
+            score += 1000;
+            System.out.println("YOU WIN! Found the treasure!");
+        }
+    }
+
+    /**
+     * Check if player has lost
+     * Lose condition: Ship touched by pirate or monster
+     */
+    public void checkLoseCondition() {
+        Point shipLoc = ship.getShipLocation();
+        
+        // Check if caught by pirate
+        for (PirateShip pirate : pirates) {
+            if (pirate.getLocation().equals(shipLoc)) {
+                currentState = GameState.LOSE;
+                System.out.println("YOU LOSE! Caught by pirate!");
+                return;
+            }
+        }
+
+        // Check if hit by monster
+        for (SeaMonster monster : monsters) {
+            if (monster.collidesWith((int)shipLoc.x, (int)shipLoc.y)) {
+                currentState = GameState.LOSE;
+                System.out.println("YOU LOSE! Hit by sea monster!");
+                return;
+            }
+        }
+    }
+
+    /**
+     * Get current game state
+     * @return GameState (PLAYING, WIN, LOSE, PAUSED)
+     */
+    public GameState getCurrentState() {
+        return currentState;
+    }
+
+    /**
+     * Set game state
+     * @param state New game state
+     */
+    public void setGameState(GameState state) {
+        this.currentState = state;
+    }
+
+    /**
+     * Get current score
+     * @return Score value
+     */
+    public int getScore() {
+        return score;
+    }
+
+    /**
+     * Reset game to initial state
+     */
+    public void resetGame() {
+        currentState = GameState.PLAYING;
+        score = 0;
+    }
+
+    /**
+     * Get the treasure
+     * @return Treasure object
+     */
+    public Treasure getTreasure() {
+        return treasure;
+    }
+
+    /**
+     * Get all sea monsters
+     * @return List of SeaMonster
+     */
+    public List<SeaMonster> getMonsters() {
+        return monsters;
+    }
+
+    /**
+     * Get all pirates
+     * @return List of PirateShip
+     */
+    public List<PirateShip> getPirates() {
+        return pirates;
+    }
+}

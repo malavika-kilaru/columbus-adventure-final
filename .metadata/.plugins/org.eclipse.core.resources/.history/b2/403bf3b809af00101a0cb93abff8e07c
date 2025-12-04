@@ -1,0 +1,60 @@
+package application;
+
+import javafx.scene.shape.Rectangle;
+import javafx.scene.paint.Color;
+import javafx.geometry.Point2D;
+import java.util.ArrayList;
+
+
+public class FlowerBed implements iComposite {
+	private Rectangle rectangle;
+	private ArrayList<iComposite> children;
+	
+	public FlowerBed(Point2D position,double width,double height) {
+		this.children=new ArrayList<>();
+		
+		rectangle =new Rectangle();
+		rectangle.setX(position.getX());
+		rectangle.setY(position.getY());
+		rectangle.setWidth(width);
+		rectangle.setHeight(height);
+		rectangle.setFill(Color.SADDLEBROWN);
+		rectangle.setStroke(Color.BLACK);
+		rectangle.setStrokeWidth(2);
+		
+		rectangle.setUserData(this);
+	}
+	public void move(double dx,double dy) {
+		rectangle.setX(rectangle.getX()+dx);;
+		rectangle.setY(rectangle.getY()+dy);;
+		
+		for(iComposite child:children) {
+			child.move(dx,dy);
+		}
+	}
+	
+	public void add(iComposite component) {
+		if(!children.contains(component)) {
+			children.add(component);
+			System.out.println("Flower added to bed!");
+		}
+	}
+public void remove(iComposite component) {
+	children.remove(component);
+}
+public boolean conatins(Point2D point) {
+	return point.getX()>= rectangle.getX() &&
+		   point.getX()<=rectangle.getX()+rectangle.getWidth() &&
+		   point.getY()>=rectangle.getY() && 
+		   point.getY()<=rectangle.getY()+rectangle.getHeight();
+}
+public Rectangle getRectangle() {
+	return rectangle;
+
+}
+@Override
+public Boolean contains(Point2D point) {
+	// TODO Auto-generated method stub
+	return null;
+}
+}

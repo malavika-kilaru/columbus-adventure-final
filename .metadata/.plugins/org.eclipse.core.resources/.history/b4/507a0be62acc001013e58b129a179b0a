@@ -1,0 +1,30 @@
+package application;
+
+/**
+ * PatrolPirateShipFactory - Creates patrol pirates
+ * 
+ * Concrete factory that creates pirate ships with PatrolStrategy.
+ * These pirates patrol randomly and are less aggressive.
+ * 
+ * Concrete Implementation of PirateShipFactory
+ * 
+ * @author Student
+ * @version 1.0
+ */
+public class PatrolPirateShipFactory extends PirateShipFactory {
+    
+    /**
+     * Creates a pirate ship with PatrolStrategy
+     * 
+     * @param x Starting X coordinate
+     * @param y Starting Y coordinate
+     * @param dimension Grid dimension
+     * @param oceanMap Reference to ocean map
+     * @return PirateShip configured with PatrolStrategy
+     */
+    @Override
+    public PirateShip createPirateShip(int x, int y, int dimension, OceanMap oceanMap) {
+        PirateMovementStrategy patrolStrategy = new PatrolStrategy();
+        return new PirateShip(x, y, dimension, oceanMap, patrolStrategy);
+    }
+}

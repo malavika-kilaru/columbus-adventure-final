@@ -1,0 +1,172 @@
+package application;
+
+import java.awt.Point;
+
+/**
+ * PirateAI - Advanced AI system for different pirate behaviors
+ * 
+ * Different difficulty levels have different AI:
+ * EASY: Dumb pirates (random movement, slow chase)
+ * MEDIUM: Medium pirates (decent chase, moderate strategy)
+ * HARD: Smart pirates (aggressive chase, coordinate attacks)
+ * SURVIVAL: Expert pirates (hunt in groups, predict player movement)
+ */
+public class PirateAI {
+    private Point location;
+    private Point targetLocation;
+    private OceanMap oceanMap;
+    private int dimension;
+    private String difficulty;
+    private int chasePower; // How hard they chase
+    private int huntRadius; // How far they can "see" you
+    private int aggression; // How aggressive the chase is
+    private int moveCounter = 0;
+
+    public PirateAI(int x, int y, int dimension, OceanMap oceanMap, String difficulty) {
+        this.location = new Point(x, y);
+        this.targetLocation = new Point(x, y);
+        this.dimension = dimension;
+        this.oceanMap = oceanMap;
+        this.difficulty = difficulty;
+        setDifficultyStats();
+    }
+
+    /**
+     * Set AI stats based on difficulty
+     */
+    private void setDifficultyStats() {
+        switch(difficulty.toUpperCase()) {
+            case "EASY":
+                this.chasePower = 1;      // Very weak chase
+                this.huntRadius = 3;       // Can only see 3 squares away
+                this.aggression = 1;       // Low aggression
+                break;
+            case "MEDIUM":
+                this.chasePower = 2;      // Medium chase power
+                this.huntRadius = 6;       // Can see 6 squares away
+                this.aggression = 2;       // Medium aggression
+                break;
+            case "HARD":
+                this.chasePower = 3;      // Strong chase power
+                this.huntRadius = 10;      // Can see 10 squares away
+                this.aggression = 3;       // High aggression
+                break;
+            case "SURVIVAL":
+                this.chasePower = 5;      // MAXIMUM chase power
+                this.huntRadius = 15;      // Can see entire map
+                this.aggression = 5;       // Insane aggression
+                break;
+        }
+    }
+
+    /**
+     * Update pirate position and target
+     */
+    public void update(Point shipLocation) {
+        // Check if pirate can "see" the ship
+        double distanceToShip = calculateDistance(location, shipLocation);
+        
+        if (distanceToShip <= huntRadius) {
+            // Ship is within hunting radius - CHASE!
+            targetLocation = new Point(shipLocation);
+            chaseShip();
+        } else {
+            // Can't see ship - wander randomly
+            randomPatrol();
+        }
+        
+        moveCounter++;
+    }
+
+    /**
+     * Chase the ship with varying difficulty
+     */
+    private void chaseShip() {
+        int dx = targetLocation.x - location.x;
+        int dy = targetLocation.y - location.y;
+        
+        if (dx == 0 && dy == 0) return;
+        
+        // Move multiple times based on chase power (difficulty)
+        for (int i = 0; i < chasePower; i++) {
+            moveTowardTarget(dx, dy);
+        }
+    }
+
+    /**
+     * Move one step toward target
+     */
+    private void moveTowardTarget(int dx, int dy) {
+        Point newLoc = new Point(location);
+        
+        // Calculate best direction
+        if (Math.abs(dx) > Math.abs(dy)) {
+            if (dx > 0) newLoc.x++;
+            else if (dx < 0) newLoc.x--;
+        } else {
+            if (dy > 0) newLoc.y++;
+            else if (dy < 0) newLoc.y--;
+        }
+        
+        // Check if move is valid
+        if (canMoveTo(newLoc)) {
+            location = newLoc;
+        }
+    }
+
+    /**
+     * Random patrol when can't see ship
+     */
+    private void randomPatrol() {
+        // Move less frequently on easy
+        if (difficulty.equalsIgnoreCase("EASY") && moveCounter % 3 != 0) {
+            return;
+        }
+        
+        Point newLoc = new Point(location);
+        int direction = (int)(Math.random() * 4);
+        
+        switch(direction) {
+            case 0: newLoc.y--; break;
+            case 1: newLoc.y++; break;
+            case 2: newLoc.x++; break;
+            case 3: newLoc.x--; break;
+        }
+        
+        if (canMoveTo(newLoc)) {
+            location = newLoc;
+        }
+    }
+
+    /**
+     * Calculate distance between two points
+     */
+    private double calculateDistance(Point p1, Point p2) {
+        return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+    }
+
+    /**
+     * Check if move is valid
+     */
+    private boolean canMoveTo(Point newLoc) {
+        return oceanMap.isINBounds(newLoc.x, newLoc.y) && 
+               !oceanMap.isIsland(newLoc.x, newLoc.y);
+    }
+
+    public Point getLocation() {
+        return location;
+    }
+
+    public String getDifficulty() {
+        return difficulty;
+    }
+
+    public int getHuntRadius() {
+        return huntRadius;
+    }
+
+    @Override
+    public String toString() {
+        return "Pirate(" + difficulty + ") at " + location;
+    }
+}

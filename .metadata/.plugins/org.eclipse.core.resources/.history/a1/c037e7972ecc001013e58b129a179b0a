@@ -1,0 +1,469 @@
+package application;
+
+import javafx.animation.Animation;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
+import javafx.application.Application;
+import javafx.event.EventHandler;
+import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.AnchorPane;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
+import javafx.scene.shape.Rectangle;
+import javafx.scene.text.Font;
+import javafx.scene.text.Text;
+import javafx.stage.Stage;
+import javafx.util.Duration;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * OceanExplorer - With visual collision detection
+ */
+public class OceanExplorer extends Application {
+    private int dimension;
+    private final int scale = 50;
+    private GameDifficultyMenu.GameDifficulty difficulty;
+    private Stage oceanStage;
+
+    private OceanMap oceanMap;
+    private Ship ship;
+    private Treasure treasure;
+    private List<PirateShip> pirates = new ArrayList<>();
+    private List<SeaMonster> monsters = new ArrayList<>();
+    private GameController gameController;
+
+    private Rectangle shipImageView;
+    private List<Rectangle> pirateImageViews = new ArrayList<>();
+    private List<Circle> monsterImageViews = new ArrayList<>();
+    private Circle treasureImageView;
+    
+    private Text statusText;
+    private Text scoreText;
+    private Text difficultyText;
+    private Text collisionText;
+
+    private AnchorPane root;
+    private Scene scene;
+    private boolean[][] oceanGrid;
+
+    /**
+     * Main entry point
+     */
+    public static void main(String[] args) {
+        launch(args);
+    }
+
+    /**
+     * Start method
+     */
+    @Override
+    public void start(Stage stage) {
+        this.oceanStage = stage;
+        System.out.println("====SHOWING MENU====");
+        
+        GameDifficultyMenu menu = new GameDifficultyMenu(stage);
+        menu.showMenu(() -> {
+            difficulty = menu.getSelectedDifficulty();
+            System.out.println("Starting game with: " + difficulty.getDisplayName());
+            startGame();
+        });
+    }
+
+    /**
+     * Start the actual game
+     */
+    private void startGame() {
+        System.out.println("====GAME STARTING====");
+        
+        dimension = difficulty.getGridDimension();
+        OceanMap.instance = null;
+        oceanMap = OceanMap.getInstance(dimension);
+        
+        ship = new Ship(1, 1, dimension);
+        treasure = new Treasure(dimension, oceanMap);
+        
+        oceanMap.setShip(ship);
+        oceanMap.placeIslands(8);
+
+        createPirates();
+        createMonsters();
+
+        gameController = new GameController(ship, treasure, oceanMap);
+        for (PirateShip pirate : pirates) {
+            gameController.addPirate(pirate);
+        }
+        for (SeaMonster monster : monsters) {
+            gameController.addMonster(monster);
+        }
+
+        System.out.println("✓ Game initialized");
+
+        root = new AnchorPane();
+        scene = new Scene(root, dimension * scale, dimension * scale + 120);
+
+        drawMap();
+        loadShipImage();
+        loadTreasureImage();
+        loadPirateImages();
+        loadMonsterImages();
+        createStatusDisplay();
+
+        oceanStage.setScene(scene);
+        oceanStage.setTitle("Christopher Columbus - " + difficulty.getDisplayName());
+        
+        startSailing();
+        startGameLoop();
+        
+        System.out.println("====GAME READY====");
+    }
+
+    /**
+     * Create pirates
+     */
+    private void createPirates() {
+        PirateShipFactory chaseFactory = new ChasePirateShipFactory();
+        PirateShipFactory patrolFactory = new PatrolPirateShipFactory();
+
+        int pirateCount = difficulty.getPirateCount();
+        
+        for (int i = 0; i < pirateCount; i++) {
+            int x = 5 + (i % 3) * 4;
+            int y = 5 + (i / 3) * 4;
+            
+            PirateShip pirate;
+            if (i % 2 == 0) {
+                pirate = chaseFactory.makePirateShip(x, y, dimension, oceanMap);
+            } else {
+                pirate = patrolFactory.makePirateShip(x, y, dimension, oceanMap);
+            }
+            
+            ship.attach(pirate);
+            pirates.add(pirate);
+        }
+    }
+
+    /**
+     * Create monsters
+     */
+    private void createMonsters() {
+        int monsterCount = difficulty.getMonsterCount();
+        String[] monsterTypes = {"Shark", "Kraken", "GhostShip"};
+        
+        for (int i = 0; i < monsterCount; i++) {
+            int x = (dimension - 3) - (i % 2) * 3;
+            int y = (dimension - 3) - (i / 2) * 3;
+            String type = monsterTypes[i % monsterTypes.length];
+            
+            SeaMonster monster = new SeaMonster(x, y, dimension, oceanMap, type);
+            monsters.add(monster);
+        }
+    }
+
+    /**
+     * Draw the ocean map with colors
+     */
+    private void drawMap() {
+        oceanGrid = oceanMap.getMap();
+        for (int x = 0; x < dimension; x++) {
+            for (int y = 0; y < dimension; y++) {
+                if (oceanGrid[x][y]) {
+                    // ISLAND - Green
+                    Rectangle islandRect = new Rectangle(x * scale, y * scale, scale, scale);
+                    islandRect.setStroke(Color.DARKGREEN);
+                    islandRect.setStrokeWidth(2);
+                    islandRect.setFill(Color.LIMEGREEN);
+                    root.getChildren().add(islandRect);
+                } else {
+                    // WATER - Blue
+                    Rectangle waterRect = new Rectangle(x * scale, y * scale, scale, scale);
+                    waterRect.setStroke(Color.BLACK);
+                    waterRect.setStrokeWidth(1);
+                    waterRect.setFill(Color.LIGHTBLUE);
+                    root.getChildren().add(waterRect);
+                }
+            }
+        }
+        System.out.println("✓ Map drawn");
+    }
+
+    /**
+     * Load ship - RED SQUARE
+     */
+    private void loadShipImage() {
+        shipImageView = new Rectangle(
+            ship.getShipLocation().x * scale + 5,
+            ship.getShipLocation().y * scale + 5,
+            scale - 10,
+            scale - 10
+        );
+        shipImageView.setFill(Color.RED);
+        shipImageView.setStroke(Color.DARKRED);
+        shipImageView.setStrokeWidth(2);
+        root.getChildren().add(shipImageView);
+    }
+
+    /**
+     * Load treasure - GOLD CIRCLE
+     */
+    private void loadTreasureImage() {
+        treasureImageView = new Circle(
+            treasure.getLocation().x * scale + scale / 2,
+            treasure.getLocation().y * scale + scale / 2,
+            scale / 3
+        );
+        treasureImageView.setFill(Color.GOLD);
+        treasureImageView.setStroke(Color.ORANGE);
+        treasureImageView.setStrokeWidth(2);
+        root.getChildren().add(treasureImageView);
+    }
+
+    /**
+     * Load pirates - BLACK SQUARES
+     */
+    private void loadPirateImages() {
+        for (int i = 0; i < pirates.size(); i++) {
+            PirateShip pirate = pirates.get(i);
+            
+            Rectangle pirateRect = new Rectangle(
+                pirate.getLocation().x * scale + 5,
+                pirate.getLocation().y * scale + 5,
+                scale - 10,
+                scale - 10
+            );
+            
+            // Different colors for different pirates
+            if (i % 2 == 0) {
+                pirateRect.setFill(Color.BLACK);
+                pirateRect.setStroke(Color.GRAY);
+            } else {
+                pirateRect.setFill(Color.DARKSLATEGRAY);
+                pirateRect.setStroke(Color.WHITE);
+            }
+            pirateRect.setStrokeWidth(2);
+            
+            root.getChildren().add(pirateRect);
+            pirateImageViews.add(pirateRect);
+        }
+        System.out.println("✓ " + pirates.size() + " Pirates loaded (BLACK squares)");
+    }
+
+    /**
+     * Load monsters - PURPLE CIRCLES
+     */
+    private void loadMonsterImages() {
+        for (int i = 0; i < monsters.size(); i++) {
+            SeaMonster monster = monsters.get(i);
+            
+            Circle monsterCircle = new Circle(
+                monster.getLocation().x * scale + scale / 2,
+                monster.getLocation().y * scale + scale / 2,
+                scale / 2.5
+            );
+            
+            // Different colors for different monsters
+            if (monster.getMonsterType().equals("Shark")) {
+                monsterCircle.setFill(Color.MEDIUMPURPLE);
+                monsterCircle.setStroke(Color.PURPLE);
+            } else if (monster.getMonsterType().equals("Kraken")) {
+                monsterCircle.setFill(Color.DARKVIOLET);
+                monsterCircle.setStroke(Color.PURPLE);
+            } else {
+                monsterCircle.setFill(Color.PLUM);
+                monsterCircle.setStroke(Color.VIOLET);
+            }
+            monsterCircle.setStrokeWidth(2);
+            
+            root.getChildren().add(monsterCircle);
+            monsterImageViews.add(monsterCircle);
+        }
+        System.out.println("✓ " + monsters.size() + " Monsters loaded (PURPLE circles)");
+    }
+
+    /**
+     * Create status display
+     */
+    private void createStatusDisplay() {
+        difficultyText = new Text("Mode: " + difficulty.getDisplayName());
+        difficultyText.setFont(new Font(14));
+        difficultyText.setFill(Color.GOLD);
+        difficultyText.setX(10);
+        difficultyText.setY(dimension * scale + 20);
+        root.getChildren().add(difficultyText);
+
+        statusText = new Text("Status: PLAYING");
+        statusText.setFont(new Font(14));
+        statusText.setX(300);
+        statusText.setY(dimension * scale + 20);
+        root.getChildren().add(statusText);
+
+        scoreText = new Text("Score: 0");
+        scoreText.setFont(new Font(14));
+        scoreText.setX(dimension * scale - 150);
+        scoreText.setY(dimension * scale + 20);
+        root.getChildren().add(scoreText);
+
+        Text treasureText = new Text("🎯 Treasure at: (" + treasure.getLocation().x + ", " + treasure.getLocation().y + ")");
+        treasureText.setFont(new Font(12));
+        treasureText.setFill(Color.GOLD);
+        treasureText.setX(10);
+        treasureText.setY(dimension * scale + 45);
+        root.getChildren().add(treasureText);
+
+        Text enemyText = new Text("☠️ Pirates: " + difficulty.getPirateCount() + " (BLACK) | 👹 Monsters: " + difficulty.getMonsterCount() + " (PURPLE)");
+        enemyText.setFont(new Font(12));
+        enemyText.setFill(Color.RED);
+        enemyText.setX(10);
+        enemyText.setY(dimension * scale + 65);
+        root.getChildren().add(enemyText);
+
+        collisionText = new Text("Position: (1, 1) | Use ARROW KEYS to move");
+        collisionText.setFont(new Font(11));
+        collisionText.setFill(Color.DARKBLUE);
+        collisionText.setX(300);
+        collisionText.setY(dimension * scale + 65);
+        root.getChildren().add(collisionText);
+
+        Text legendText = new Text("LEGEND: 🔴 You (Red) | 💰 Treasure (Gold) | ⬛ Pirates (Black) | 🟣 Monsters (Purple) | 🟩 Islands (Green)");
+        legendText.setFont(new Font(10));
+        legendText.setFill(Color.DARKGRAY);
+        legendText.setX(10);
+        legendText.setY(dimension * scale + 85);
+        root.getChildren().add(legendText);
+    }
+
+    /**
+     * Setup keyboard controls
+     */
+    private void startSailing() {
+        scene.setOnKeyPressed(new EventHandler<KeyEvent>() {
+            public void handle(KeyEvent ke) {
+                if (gameController.getCurrentState() == GameState.PLAYING) {
+                    switch (ke.getCode()) {
+                        case RIGHT:
+                            ship.goEast(oceanMap);
+                            break;
+                        case LEFT:
+                            ship.goWest(oceanMap);
+                            break;
+                        case UP:
+                            ship.goNorth(oceanMap);
+                            break;
+                        case DOWN:
+                            ship.goSouth(oceanMap);
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                updateDisplay();
+            }
+        });
+    }
+
+    /**
+     * Start game loop
+     */
+    private void startGameLoop() {
+        Timeline gameLoop = new Timeline(
+            new KeyFrame(Duration.millis(500), event -> {
+                gameController.update();
+                updateDisplay();
+                checkGameEnd();
+            })
+        );
+        gameLoop.setCycleCount(Animation.INDEFINITE);
+        gameLoop.play();
+    }
+
+    /**
+     * Update display
+     */
+    private void updateDisplay() {
+        // Update ship position
+        if (shipImageView != null) {
+            shipImageView.setX(ship.getShipLocation().x * scale + 5);
+            shipImageView.setY(ship.getShipLocation().y * scale + 5);
+        }
+
+        // Update pirate positions
+        for (int i = 0; i < pirates.size() && i < pirateImageViews.size(); i++) {
+            Rectangle view = pirateImageViews.get(i);
+            view.setX(pirates.get(i).getLocation().x * scale + 5);
+            view.setY(pirates.get(i).getLocation().y * scale + 5);
+        }
+
+        // Update monster positions
+        for (int i = 0; i < monsters.size() && i < monsterImageViews.size(); i++) {
+            Circle view = monsterImageViews.get(i);
+            view.setCenterX(monsters.get(i).getLocation().x * scale + scale / 2);
+            view.setCenterY(monsters.get(i).getLocation().y * scale + scale / 2);
+        }
+
+        // Update treasure position
+        if (treasureImageView != null) {
+            treasureImageView.setCenterX(treasure.getLocation().x * scale + scale / 2);
+            treasureImageView.setCenterY(treasure.getLocation().y * scale + scale / 2);
+        }
+
+        // Update status
+        statusText.setText("Status: " + gameController.getCurrentState().getDescription());
+        scoreText.setText("Score: " + gameController.getScore());
+        collisionText.setText("Position: (" + (int)ship.getShipLocation().x + ", " + (int)ship.getShipLocation().y + ") | Treasure: (" + treasure.getLocation().x + ", " + treasure.getLocation().y + ")");
+    }
+
+    /**
+     * Check game end
+     */
+    private void checkGameEnd() {
+        GameState state = gameController.getCurrentState();
+        if (state == GameState.WIN) {
+            showWinDialog();
+        } else if (state == GameState.LOSE) {
+            showLoseDialog();
+        }
+    }
+
+    /**
+     * Show win dialog
+     */
+    private void showWinDialog() {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("🎉 VICTORY!");
+        alert.setHeaderText("YOU FOUND THE TREASURE! 💰");
+        alert.setContentText(
+            "🎊 Congratulations! You conquered " + difficulty.getDisplayName() + "!\n\n" +
+            "✅ You reached the treasure safely\n" +
+            "✅ You avoided all pirates and monsters\n" +
+            "✅ You're now RICH! 💰\n\n" +
+            "Final Score: " + gameController.getScore() + " points\n\n" +
+            "Try a harder difficulty next time!"
+        );
+        alert.show();
+        gameController.setGameState(GameState.PAUSED);
+    }
+
+    /**
+     * Show lose dialog
+     */
+    private void showLoseDialog() {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("☠️ GAME OVER!");
+        alert.setHeaderText("YOU WERE CAUGHT! ☠️");
+        alert.setContentText(
+            "❌ Oh no! You were defeated in " + difficulty.getDisplayName() + "!\n\n" +
+            "❌ You got caught by pirates or sea monsters\n" +
+            "❌ The treasure was lost\n" +
+            "❌ Better luck next time!\n\n" +
+            "Final Score: " + gameController.getScore() + " points\n\n" +
+            "Tip: Use islands to hide from enemies!"
+        );
+        alert.show();
+        gameController.setGameState(GameState.PAUSED);
+    }
+}

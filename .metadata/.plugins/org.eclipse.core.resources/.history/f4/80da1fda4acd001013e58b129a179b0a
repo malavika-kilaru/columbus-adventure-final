@@ -1,0 +1,471 @@
+package application;
+
+import com.sun.net.httpserver.HttpServer;
+import com.sun.net.httpserver.HttpHandler;
+import com.sun.net.httpserver.HttpExchange;
+import java.io.*;
+import java.net.InetSocketAddress;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * GameWebServer - Backend for Christopher Columbus Game
+ * Serves HTML frontend and handles game logic via REST API
+ * 
+ * Run this: Right-click → Run As → Java Application
+ * Then open: http://localhost:8080 in your browser
+ */
+public class GameWebServer {
+    
+    private static final int PORT = 8080;
+    private static Map<String, WebGameSession> gameSessions = new HashMap<>();
+    private static int sessionCounter = 0;
+
+    public static void main(String[] args) {
+        try {
+            HttpServer server = HttpServer.create(new InetSocketAddress("localhost", PORT), 50);
+            
+            // Frontend
+            server.createContext("/", new FrontendHandler());
+            
+            // API Endpoints
+            server.createContext("/api/start", new StartGameHandler());
+            server.createContext("/api/move", new MoveHandler());
+            server.createContext("/api/state", new StateHandler());
+            
+            server.setExecutor(null);
+            server.start();
+            
+            System.out.println("╔════════════════════════════════════════════════════════╗");
+            System.out.println("║    ⚓ Christopher Columbus - Backend Server ⚓          ║");
+            System.out.println("║                                                        ║");
+            System.out.println("║  🌐 Open your browser and go to:                       ║");
+            System.out.println("║     http://localhost:8080                              ║");
+            System.out.println("║                                                        ║");
+            System.out.println("║  ✅ Server running on Port 8080                        ║");
+            System.out.println("║  Press Ctrl+C to stop the server                       ║");
+            System.out.println("╚════════════════════════════════════════════════════════╝");
+            
+        } catch (IOException e) {
+            System.err.println("ERROR: Failed to start web server on port 8080");
+            System.err.println("Reason: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * FrontendHandler - Serves HTML page
+     */
+    static class FrontendHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            String html = getHtmlContent();
+            
+            exchange.getResponseHeaders().set("Content-Type", "text/html; charset=UTF-8");
+            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+            exchange.sendResponseHeaders(200, html.getBytes().length);
+            
+            try (OutputStream os = exchange.getResponseBody()) {
+                os.write(html.getBytes());
+                os.flush();
+            }
+        }
+
+        private String getHtmlContent() {
+            return "<!DOCTYPE html>\n" +
+                "<html lang=\"en\">\n" +
+                "<head>\n" +
+                "    <meta charset=\"UTF-8\">\n" +
+                "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n" +
+                "    <title>⚓ Christopher Columbus - Quest for Treasure</title>\n" +
+                "    <style>\n" +
+                "        * { margin: 0; padding: 0; box-sizing: border-box; }\n" +
+                "        body {\n" +
+                "            font-family: Arial, sans-serif;\n" +
+                "            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);\n" +
+                "            color: white;\n" +
+                "            text-align: center;\n" +
+                "            min-height: 100vh;\n" +
+                "            display: flex;\n" +
+                "            justify-content: center;\n" +
+                "            align-items: center;\n" +
+                "            padding: 20px;\n" +
+                "        }\n" +
+                "        .container {\n" +
+                "            max-width: 900px;\n" +
+                "            width: 100%;\n" +
+                "            background: rgba(0, 0, 0, 0.8);\n" +
+                "            padding: 40px;\n" +
+                "            border-radius: 15px;\n" +
+                "            border: 2px solid #FFD700;\n" +
+                "        }\n" +
+                "        h1 { color: #FFD700; font-size: 3em; margin-bottom: 10px; }\n" +
+                "        p { color: #87CEEB; font-size: 1.2em; margin-bottom: 30px; }\n" +
+                "        #menu { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }\n" +
+                "        .btn {\n" +
+                "            padding: 15px 20px;\n" +
+                "            font-size: 1.1em;\n" +
+                "            border: none;\n" +
+                "            border-radius: 10px;\n" +
+                "            cursor: pointer;\n" +
+                "            font-weight: bold;\n" +
+                "            transition: all 0.3s ease;\n" +
+                "        }\n" +
+                "        .btn:hover { transform: scale(1.05); }\n" +
+                "        .btn-easy { background: #32CD32; color: black; }\n" +
+                "        .btn-medium { background: #FF8C00; color: white; }\n" +
+                "        .btn-hard { background: #DC143C; color: white; }\n" +
+                "        .btn-survival { background: #8B0000; color: white; }\n" +
+                "        #game { display: none; }\n" +
+                "        #game.active { display: block; }\n" +
+                "        .status-bar { background: rgba(0, 0, 0, 0.5); padding: 15px; margin: 20px 0; border-radius: 8px; border-left: 4px solid #FFD700; }\n" +
+                "        .status-bar div { font-size: 1em; margin: 5px 0; }\n" +
+                "        .grid { display: inline-grid; grid-template-columns: repeat(20, 25px); gap: 2px; padding: 15px; background: #333; border-radius: 8px; margin: 20px 0; }\n" +
+                "        .cell {\n" +
+                "            width: 25px;\n" +
+                "            height: 25px;\n" +
+                "            background: #87CEEB;\n" +
+                "            border: 1px solid #333;\n" +
+                "            font-size: 0.9em;\n" +
+                "            display: flex;\n" +
+                "            justify-content: center;\n" +
+                "            align-items: center;\n" +
+                "            border-radius: 3px;\n" +
+                "        }\n" +
+                "        .cell.island { background: #228B22; }\n" +
+                "        .cell.treasure { background: #FFD700; animation: pulse 1s infinite; font-weight: bold; }\n" +
+                "        .cell.ship { background: #FF4500; font-weight: bold; }\n" +
+                "        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }\n" +
+                "        .controls { display: grid; grid-template-columns: repeat(3, 60px); gap: 5px; justify-content: center; margin: 20px 0; }\n" +
+                "        .arrow-btn { padding: 10px; background: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 1.5em; font-weight: bold; }\n" +
+                "        .arrow-btn:hover { background: #45a049; }\n" +
+                "        .restart-btn { padding: 12px 30px; background: #FFD700; color: black; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1.1em; margin-top: 20px; }\n" +
+                "    </style>\n" +
+                "</head>\n" +
+                "<body>\n" +
+                "    <div class=\"container\">\n" +
+                "        <h1>⚓ Christopher Columbus ⚓</h1>\n" +
+                "        <p>Quest for the Lost City of Gold</p>\n" +
+                "        \n" +
+                "        <div id=\"menu\">\n" +
+                "            <button class=\"btn btn-easy\" onclick=\"startGame('EASY')\">🟢 EASY</button>\n" +
+                "            <button class=\"btn btn-medium\" onclick=\"startGame('MEDIUM')\">🟠 MEDIUM</button>\n" +
+                "            <button class=\"btn btn-hard\" onclick=\"startGame('HARD')\">🔴 HARD</button>\n" +
+                "            <button class=\"btn btn-survival\" onclick=\"startGame('SURVIVAL')\">💀 SURVIVAL</button>\n" +
+                "        </div>\n" +
+                "        \n" +
+                "        <div id=\"game\">\n" +
+                "            <div class=\"status-bar\">\n" +
+                "                <div>🎮 Mode: <span id=\"difficulty\">MEDIUM</span></div>\n" +
+                "                <div>📊 Status: <span id=\"status\">PLAYING</span></div>\n" +
+                "                <div>⭐ Score: <span id=\"score\">0</span></div>\n" +
+                "                <div>🚢 Position: (<span id=\"shipX\">0</span>, <span id=\"shipY\">0</span>)</div>\n" +
+                "                <div>💰 Treasure: (<span id=\"treasureX\">?</span>, <span id=\"treasureY\">?</span>)</div>\n" +
+                "            </div>\n" +
+                "            \n" +
+                "            <div class=\"grid\" id=\"grid\"></div>\n" +
+                "            \n" +
+                "            <div class=\"controls\">\n" +
+                "                <div></div>\n" +
+                "                <button class=\"arrow-btn\" onclick=\"moveShip('up')\">⬆️</button>\n" +
+                "                <div></div>\n" +
+                "                <button class=\"arrow-btn\" onclick=\"moveShip('left')\">⬅️</button>\n" +
+                "                <button class=\"arrow-btn\" onclick=\"moveShip('down')\">⬇️</button>\n" +
+                "                <button class=\"arrow-btn\" onclick=\"moveShip('right')\">➡️</button>\n" +
+                "            </div>\n" +
+                "            \n" +
+                "            <p style=\"font-size: 0.9em; color: #87CEEB; margin-top: 10px;\">Use arrow keys or click buttons to move</p>\n" +
+                "            <button class=\"restart-btn\" onclick=\"location.reload()\">🔄 Play Again</button>\n" +
+                "        </div>\n" +
+                "    </div>\n" +
+                "\n" +
+                "    <script>\n" +
+                "        let sessionId = null;\n" +
+                "        let gameRunning = false;\n" +
+                "\n" +
+                "        function startGame(difficulty) {\n" +
+                "            fetch('/api/start?difficulty=' + difficulty)\n" +
+                "                .then(r => r.json())\n" +
+                "                .then(data => {\n" +
+                "                    sessionId = data.sessionId;\n" +
+                "                    document.getElementById('menu').style.display = 'none';\n" +
+                "                    document.getElementById('game').classList.add('active');\n" +
+                "                    document.getElementById('difficulty').textContent = difficulty;\n" +
+                "                    gameRunning = true;\n" +
+                "                    updateGame();\n" +
+                "                    setInterval(updateGame, 500);\n" +
+                "                })\n" +
+                "                .catch(err => alert('Error: ' + err));\n" +
+                "        }\n" +
+                "\n" +
+                "        function moveShip(dir) {\n" +
+                "            if (!gameRunning || !sessionId) return;\n" +
+                "            fetch('/api/move?session=' + sessionId + '&direction=' + dir)\n" +
+                "                .then(r => r.json())\n" +
+                "                .then(() => updateGame())\n" +
+                "                .catch(err => console.error(err));\n" +
+                "        }\n" +
+                "\n" +
+                "        function updateGame() {\n" +
+                "            if (!sessionId) return;\n" +
+                "            fetch('/api/state?session=' + sessionId)\n" +
+                "                .then(r => r.json())\n" +
+                "                .then(data => {\n" +
+                "                    renderGrid(data.grid);\n" +
+                "                    document.getElementById('status').textContent = data.status;\n" +
+                "                    document.getElementById('score').textContent = data.score;\n" +
+                "                    document.getElementById('shipX').textContent = data.shipX;\n" +
+                "                    document.getElementById('shipY').textContent = data.shipY;\n" +
+                "                    document.getElementById('treasureX').textContent = data.treasureX;\n" +
+                "                    document.getElementById('treasureY').textContent = data.treasureY;\n" +
+                "                    \n" +
+                "                    if (data.status === 'WIN') {\n" +
+                "                        gameRunning = false;\n" +
+                "                        alert('🏆 YOU FOUND THE TREASURE! Score: ' + data.score);\n" +
+                "                    }\n" +
+                "                })\n" +
+                "                .catch(err => console.error(err));\n" +
+                "        }\n" +
+                "\n" +
+                "        function renderGrid(grid) {\n" +
+                "            const gridDiv = document.getElementById('grid');\n" +
+                "            gridDiv.innerHTML = '';\n" +
+                "            for (let i = 0; i < grid.length; i++) {\n" +
+                "                for (let j = 0; j < grid[i].length; j++) {\n" +
+                "                    const cell = document.createElement('div');\n" +
+                "                    cell.className = 'cell';\n" +
+                "                    switch(grid[i][j]) {\n" +
+                "                        case 'S': cell.className += ' ship'; cell.textContent = '🚢'; break;\n" +
+                "                        case 'T': cell.className += ' treasure'; cell.textContent = '💰'; break;\n" +
+                "                        case 'W': cell.className += ' island'; cell.textContent = '🏝️'; break;\n" +
+                "                        case 'E': cell.textContent = ''; break;\n" +
+                "                    }\n" +
+                "                    gridDiv.appendChild(cell);\n" +
+                "                }\n" +
+                "            }\n" +
+                "        }\n" +
+                "\n" +
+                "        document.addEventListener('keydown', (e) => {\n" +
+                "            if (e.key === 'ArrowUp') moveShip('up');\n" +
+                "            if (e.key === 'ArrowDown') moveShip('down');\n" +
+                "            if (e.key === 'ArrowLeft') moveShip('left');\n" +
+                "            if (e.key === 'ArrowRight') moveShip('right');\n" +
+                "        });\n" +
+                "    </script>\n" +
+                "</body>\n" +
+                "</html>";\n" +
+                "        }\n" +
+                "    }\n" +
+                "\n" +
+                "    /**\n" +
+                "     * StartGameHandler - Create new game session\n" +
+                "     */\n" +
+                "    static class StartGameHandler implements HttpHandler {\n" +
+                "        @Override\n" +
+                "        public void handle(HttpExchange exchange) throws IOException {\n" +
+                "            String query = exchange.getRequestURI().getQuery();\n" +
+                "            String difficulty = \"MEDIUM\";\n" +
+                "            \n" +
+                "            if (query != null && query.contains(\"difficulty=\")) {\n" +
+                "                difficulty = query.split(\"=\")[1].toUpperCase();\n" +
+                "            }\n" +
+                "            \n" +
+                "            String sessionId = \"session_\" + (++sessionCounter);\n" +
+                "            WebGameSession session = new WebGameSession(sessionId, difficulty);\n" +
+                "            gameSessions.put(sessionId, session);\n" +
+                "            \n" +
+                "            String response = \"{\\\"sessionId\\\":\\\"\" + sessionId + \"\\\",\\\"difficulty\\\":\\\"\" + difficulty + \"\\\"}\";\n" +
+                "            exchange.getResponseHeaders().set(\"Content-Type\", \"application/json\");\n" +
+                "            exchange.getResponseHeaders().set(\"Access-Control-Allow-Origin\", \"*\");\n" +
+                "            exchange.sendResponseHeaders(200, response.getBytes().length);\n" +
+                "            \n" +
+                "            try (OutputStream os = exchange.getResponseBody()) {\n" +
+                "                os.write(response.getBytes());\n" +
+                "                os.flush();\n" +
+                "            }\n" +
+                "        }\n" +
+                "    }\n" +
+                "\n" +
+                "    /**\n" +
+                "     * MoveHandler - Handle ship movement\n" +
+                "     */\n" +
+                "    static class MoveHandler implements HttpHandler {\n" +
+                "        @Override\n" +
+                "        public void handle(HttpExchange exchange) throws IOException {\n" +
+                "            String query = exchange.getRequestURI().getQuery();\n" +
+                "            String sessionId = \"\";\n" +
+                "            String direction = \"\";\n" +
+                "            \n" +
+                "            if (query != null) {\n" +
+                "                String[] params = query.split(\"&\");\n" +
+                "                for (String param : params) {\n" +
+                "                    if (param.startsWith(\"session=\")) sessionId = param.substring(8);\n" +
+                "                    if (param.startsWith(\"direction=\")) direction = param.substring(10);\n" +
+                "                }\n" +
+                "            }\n" +
+                "            \n" +
+                "            WebGameSession session = gameSessions.get(sessionId);\n" +
+                "            if (session != null) {\n" +
+                "                session.moveShip(direction);\n" +
+                "            }\n" +
+                "            \n" +
+                "            String response = \"{\\\"success\\\":true}\";\n" +
+                "            exchange.getResponseHeaders().set(\"Content-Type\", \"application/json\");\n" +
+                "            exchange.getResponseHeaders().set(\"Access-Control-Allow-Origin\", \"*\");\n" +
+                "            exchange.sendResponseHeaders(200, response.getBytes().length);\n" +
+                "            \n" +
+                "            try (OutputStream os = exchange.getResponseBody()) {\n" +
+                "                os.write(response.getBytes());\n" +
+                "                os.flush();\n" +
+                "            }\n" +
+                "        }\n" +
+                "    }\n" +
+                "\n" +
+                "    /**\n" +
+                "     * StateHandler - Get current game state\n" +
+                "     */\n" +
+                "    static class StateHandler implements HttpHandler {\n" +
+                "        @Override\n" +
+                "        public void handle(HttpExchange exchange) throws IOException {\n" +
+                "            String query = exchange.getRequestURI().getQuery();\n" +
+                "            String sessionId = \"\";\n" +
+                "            \n" +
+                "            if (query != null && query.contains(\"session=\")) {\n" +
+                "                sessionId = query.split(\"=\")[1];\n" +
+                "            }\n" +
+                "            \n" +
+                "            WebGameSession session = gameSessions.get(sessionId);\n" +
+                "            String response = (session != null) ? session.getGameState() : \n" +
+                "                \"{\\\"grid\\\":[],\\\"status\\\":\\\"ERROR\\\",\\\"score\\\":0}\";\n" +
+                "            \n" +
+                "            exchange.getResponseHeaders().set(\"Content-Type\", \"application/json\");\n" +
+                "            exchange.getResponseHeaders().set(\"Access-Control-Allow-Origin\", \"*\");\n" +
+                "            exchange.sendResponseHeaders(200, response.getBytes().length);\n" +
+                "            \n" +
+                "            try (OutputStream os = exchange.getResponseBody()) {\n" +
+                "                os.write(response.getBytes());\n" +
+                "                os.flush();\n" +
+                "            }\n" +
+                "        }\n" +
+                "    }\n" +
+                "}\n" +
+                "\n" +
+                "/**\n" +
+                " * WebGameSession - Represents an active game session\n" +
+                " */\n" +
+                "class WebGameSession {\n" +
+                "    private String sessionId;\n" +
+                "    private String difficulty;\n" +
+                "    private int shipX = 1;\n" +
+                "    private int shipY = 1;\n" +
+                "    private int treasureX;\n" +
+                "    private int treasureY;\n" +
+                "    private int score = 0;\n" +
+                "    private String status = \"PLAYING\";\n" +
+                "    private int[][] grid;\n" +
+                "    private int dimension = 20;\n" +
+                "\n" +
+                "    public WebGameSession(String sessionId, String difficulty) {\n" +
+                "        this.sessionId = sessionId;\n" +
+                "        this.difficulty = difficulty;\n" +
+                "        initializeGame();\n" +
+                "    }\n" +
+                "\n" +
+                "    private void initializeGame() {\n" +
+                "        grid = new int[dimension][dimension];\n" +
+                "        \n" +
+                "        // Fill with water (0)\n" +
+                "        for (int i = 0; i < dimension; i++) {\n" +
+                "            for (int j = 0; j < dimension; j++) {\n" +
+                "                grid[i][j] = 0;\n" +
+                "            }\n" +
+                "        }\n" +
+                "        \n" +
+                "        // Add islands (1)\n" +
+                "        for (int i = 0; i < 12; i++) {\n" +
+                "            int x = (int)(Math.random() * dimension);\n" +
+                "            int y = (int)(Math.random() * dimension);\n" +
+                "            if (grid[x][y] == 0) {\n" +
+                "                grid[x][y] = 1;\n" +
+                "            }\n" +
+                "        }\n" +
+                "        \n" +
+                "        // Place treasure randomly\n" +
+                "        do {\n" +
+                "            treasureX = (int)(Math.random() * dimension);\n" +
+                "            treasureY = (int)(Math.random() * dimension);\n" +
+                "        } while (grid[treasureX][treasureY] == 1);\n" +
+                "    }\n" +
+                "\n" +
+                "    public void moveShip(String direction) {\n" +
+                "        int newX = shipX;\n" +
+                "        int newY = shipY;\n" +
+                "        \n" +
+                "        switch(direction.toLowerCase()) {\n" +
+                "            case \"up\":\n" +
+                "                newY = Math.max(0, newY - 1);\n" +
+                "                break;\n" +
+                "            case \"down\":\n" +
+                "                newY = Math.min(dimension - 1, newY + 1);\n" +
+                "                break;\n" +
+                "            case \"left\":\n" +
+                "                newX = Math.max(0, newX - 1);\n" +
+                "                break;\n" +
+                "            case \"right\":\n" +
+                "                newX = Math.min(dimension - 1, newX + 1);\n" +
+                "                break;\n" +
+                "        }\n" +
+                "        \n" +
+                "        // Check if not island\n" +
+                "        if (grid[newY][newX] != 1) {\n" +
+                "            shipX = newX;\n" +
+                "            shipY = newY;\n" +
+                "            score += 10;\n" +
+                "            \n" +
+                "            // Check win condition\n" +
+                "            if (shipX == treasureX && shipY == treasureY) {\n" +
+                "                status = \"WIN\";\n" +
+                "                score += 1000;\n" +
+                "            }\n" +
+                "        }\n" +
+                "    }\n" +
+                "\n" +
+                "    public String getGameState() {\n" +
+                "        StringBuilder sb = new StringBuilder();\n" +
+                "        sb.append(\"{\\\"grid\\\":[\\n\");\n" +
+                "        \n" +
+                "        for (int i = 0; i < dimension; i++) {\n" +
+                "            sb.append(\"[\");\n" +
+                "            for (int j = 0; j < dimension; j++) {\n" +
+                "                if (i == shipY && j == shipX) {\n" +
+                "                    sb.append(\"\\\"S\\\"\");\n" +
+                "                } else if (i == treasureY && j == treasureX) {\n" +
+                "                    sb.append(\"\\\"T\\\"\");\n" +
+                "                } else if (grid[i][j] == 1) {\n" +
+                "                    sb.append(\"\\\"W\\\"\");\n" +
+                "                } else {\n" +
+                "                    sb.append(\"\\\"E\\\"\");\n" +
+                "                }\n" +
+                "                if (j < dimension - 1) sb.append(\",\");\n" +
+                "            }\n" +
+                "            sb.append(\"]\");\n" +
+                "            if (i < dimension - 1) sb.append(\",\");\n" +
+                "        }\n" +
+                "        \n" +
+                "        sb.append(\"],\\\"status\\\":\\\"\")\n" +
+                "            .append(status)\n" +
+                "            .append(\"\\\",\\\"score\\\":\")\n" +
+                "            .append(score)\n" +
+                "            .append(\",\\\"shipX\\\":\")\n" +
+                "            .append(shipX)\n" +
+                "            .append(\",\\\"shipY\\\":\")\n" +
+                "            .append(shipY)\n" +
+                "            .append(\",\\\"treasureX\\\":\")\n" +
+                "            .append(treasureX)\n" +
+                "            .append(\",\\\"treasureY\\\":\")\n" +
+                "            .append(treasureY)\n" +
+                "            .append(\"}\");\n" +
+                "        \n" +
+                "        return sb.toString();\n" +
+                "    }\n" +
+                "}"

@@ -1,0 +1,273 @@
+package application;
+
+import com.sun.net.httpserver.HttpServer;
+import com.sun.net.httpserver.HttpExchange;
+import java.io.*;
+import java.net.InetSocketAddress;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * ENHANCED GameWebServer - With Levels, Enemies, Power-ups, and Game Progression
+ */
+public class GameWebServer {
+    
+    private static final int PORT = 8000;
+    private static Map<String, WebGameSession> gameSessions = new HashMap<>();
+    private static int sessionCounter = 0;
+
+    public static void main(String[] args) {
+        try {
+            HttpServer server = HttpServer.create(new InetSocketAddress("localhost", PORT), 50);
+            
+            server.createContext("/", exchange -> handleFrontend(exchange));
+            server.createContext("/api/start", exchange -> handleStart(exchange));
+            server.createContext("/api/move", exchange -> handleMove(exchange));
+            server.createContext("/api/state", exchange -> handleState(exchange));
+            
+            server.setExecutor(null);
+            server.start();
+            
+            System.out.println("╔════════════════════════════════════════════════════════╗");
+            System.out.println("║    ⚓ Christopher Columbus - Backend Server ⚓          ║");
+            System.out.println("║                                                        ║");
+            System.out.println("║  🌐 Open: http://localhost:8000                        ║");
+            System.out.println("║                                                        ║");
+            System.out.println("║  ✅ Server running - Press Ctrl+C to stop              ║");
+            System.out.println("╚════════════════════════════════════════════════════════╝");
+            
+        } catch (IOException e) {
+            System.err.println("ERROR: " + e.getMessage());
+        }
+    }
+
+    private static void handleFrontend(HttpExchange exchange) throws IOException {
+        String html = getHtmlContent();
+        exchange.getResponseHeaders().set("Content-Type", "text/html; charset=UTF-8");
+        exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+        exchange.sendResponseHeaders(200, html.getBytes().length);
+        try (OutputStream os = exchange.getResponseBody()) {
+            os.write(html.getBytes());
+        }
+    }
+
+    private static void handleStart(HttpExchange exchange) throws IOException {
+        String query = exchange.getRequestURI().getQuery();
+        String difficulty = "MEDIUM";
+        if (query != null && query.contains("difficulty=")) {
+            difficulty = query.split("=")[1].toUpperCase();
+        }
+        String sessionId = "session_" + (++sessionCounter);
+        WebGameSession session = new WebGameSession(sessionId, difficulty);
+        gameSessions.put(sessionId, session);
+        String response = "{\"sessionId\":\"" + sessionId + "\",\"difficulty\":\"" + difficulty + "\",\"level\":1}";
+        sendJSON(exchange, response);
+    }
+
+    private static void handleMove(HttpExchange exchange) throws IOException {
+        String query = exchange.getRequestURI().getQuery();
+        String sessionId = "";
+        String direction = "";
+        if (query != null) {
+            String[] params = query.split("&");
+            for (String param : params) {
+                if (param.startsWith("session=")) sessionId = param.substring(8);
+                if (param.startsWith("direction=")) direction = param.substring(10);
+            }
+        }
+        WebGameSession session = gameSessions.get(sessionId);
+        if (session != null) {
+            session.moveShip(direction);
+        }
+        sendJSON(exchange, "{\"success\":true}");
+    }
+
+    private static void handleState(HttpExchange exchange) throws IOException {
+        String query = exchange.getRequestURI().getQuery();
+        String sessionId = "";
+        if (query != null && query.contains("session=")) {
+            sessionId = query.split("=")[1];
+        }
+        WebGameSession session = gameSessions.get(sessionId);
+        String response = (session != null) ? session.getGameState() : "{\"error\":\"Not found\"}";
+        sendJSON(exchange, response);
+    }
+
+    private static void sendJSON(HttpExchange exchange, String json) throws IOException {
+        exchange.getResponseHeaders().set("Content-Type", "application/json");
+        exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+        exchange.sendResponseHeaders(200, json.getBytes().length);
+        try (OutputStream os = exchange.getResponseBody()) {
+            os.write(json.getBytes());
+        }
+    }
+
+    private static String getHtmlContent() {
+        return "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><title>Christopher Columbus - Quest</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);color:white;padding:20px}#container{max-width:1000px;margin:0 auto;background:rgba(0,0,0,0.9);padding:30px;border-radius:15px;border:3px solid #FFD700}h1{color:#FFD700;font-size:2.8em;margin:0 0 10px 0;text-shadow:2px 2px 4px #000}p{color:#87CEEB;font-size:1em}#menu{display:grid;grid-template-columns:repeat(2,1fr);gap:15px;margin:20px 0}.btn{padding:15px;font-size:1em;border:none;border-radius:8px;cursor:pointer;font-weight:bold;transition:0.3s;text-transform:uppercase}.btn:hover{transform:scale(1.05)}.btn-easy{background:#32CD32;color:#000}.btn-medium{background:#FF8C00;color:#fff}.btn-hard{background:#DC143C;color:#fff}.btn-survival{background:#8B0000;color:#fff}#game{display:none}#game.active{display:block}.info-bar{background:rgba(255,215,0,0.1);padding:15px;margin:15px 0;border-radius:8px;border-left:4px solid #FFD700;display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.info-item{font-size:0.95em}.stat-label{color:#FFD700;font-weight:bold}.stat-value{color:#87CEEB;font-size:1.1em}.level-info{background:#228B22;padding:10px;border-radius:5px;color:#FFD700;font-weight:bold;margin:10px 0}#grid{display:inline-grid;grid-template-columns:repeat(20,30px);gap:1px;padding:15px;background:#1a1a1a;margin:20px 0;border:2px solid #FFD700}.cell{width:30px;height:30px;background:#4a7c9e;border:1px solid #333;display:flex;justify-content:center;align-items:center;font-size:1em;font-weight:bold;border-radius:2px}.cell.island{background:#228B22;color:#fff}.cell.treasure{background:#FFD700;animation:pulse 0.8s infinite}.cell.ship{background:#FF4500;color:#fff}.cell.enemy{background:#8B0000;color:#fff}.cell.power{background:#00CED1;animation:glow 1s infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}@keyframes glow{0%,100%{box-shadow:0 0 5px #FFD700}50%{box-shadow:0 0 10px #FFD700}}.controls{display:grid;grid-template-columns:repeat(3,70px);gap:8px;justify-content:center;margin:20px 0}.arrow-btn{padding:12px;background:#4CAF50;color:white;border:none;border-radius:8px;cursor:pointer;font-size:1.3em;font-weight:bold;transition:0.2s}.arrow-btn:hover{background:#45a049;transform:scale(1.1)}.next-level-btn{padding:15px 40px;background:#FFD700;color:black;border:none;border-radius:8px;cursor:pointer;font-weight:bold;font-size:1.1em;margin:20px 0}.next-level-btn:hover{background:#FFC700}.restart-btn{padding:15px 40px;background:#FF6347;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:bold;font-size:1.1em;margin:10px 5px}.legend{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:20px 0;font-size:0.9em}.legend-item{padding:10px;background:rgba(255,255,255,0.1);border-radius:5px;border-left:3px solid #FFD700}#gameOver{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,0.95);padding:40px;border-radius:15px;border:3px solid #FFD700;text-align:center;z-index:1000;box-shadow:0 0 30px rgba(255,215,0,0.5)}.modal-btn{padding:15px 30px;background:#4CAF50;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:bold;font-size:1.1em;margin:10px}</style></head><body><div id=\"container\"><h1>⚓ Christopher Columbus Adventure ⚓</h1><p>Quest for Treasure Across the Ocean</p><div id=\"menu\"><button class=\"btn btn-easy\" onclick=\"startGame('EASY')\">🟢 EASY</button><button class=\"btn btn-medium\" onclick=\"startGame('MEDIUM')\">🟠 MEDIUM</button><button class=\"btn btn-hard\" onclick=\"startGame('HARD')\">🔴 HARD</button><button class=\"btn btn-survival\" onclick=\"startGame('SURVIVAL')\">💀 SURVIVAL</button></div><div id=\"game\"><div class=\"level-info\">🎮 LEVEL: <span id=\"level\">1</span> | 📊 DIFFICULTY: <span id=\"difficulty\">MEDIUM</span></div><div class=\"info-bar\"><div class=\"info-item\"><span class=\"stat-label\">⭐ Score:</span><br><span class=\"stat-value\" id=\"score\">0</span></div><div class=\"info-item\"><span class=\"stat-label\">❤️ Lives:</span><br><span class=\"stat-value\" id=\"lives\">3</span></div><div class=\"info-item\"><span class=\"stat-label\">📍 Position:</span><br><span class=\"stat-value\">(<span id=\"shipX\">1</span>,<span id=\"shipY\">1</span>)</span></div><div class=\"info-item\"><span class=\"stat-label\">💰 Treasure:</span><br><span class=\"stat-value\">(<span id=\"treasureX\">?</span>,<span id=\"treasureY\">?</span>)</span></div><div class=\"info-item\"><span class=\"stat-label\">👹 Enemies:</span><br><span class=\"stat-value\" id=\"enemies\">2</span></div><div class=\"info-item\"><span class=\"stat-label\">📊 Status:</span><br><span class=\"stat-value\" id=\"status\">PLAYING</span></div></div><div id=\"grid\"></div><div class=\"legend\"><div class=\"legend-item\">🚢 = Your Ship</div><div class=\"legend-item\">💰 = Treasure</div><div class=\"legend-item\">🏝️ = Island</div><div class=\"legend-item\">👹 = Enemy</div></div><div class=\"controls\"><div></div><button class=\"arrow-btn\" onclick=\"moveShip('up')\">⬆️</button><div></div><button class=\"arrow-btn\" onclick=\"moveShip('left')\">⬅️</button><button class=\"arrow-btn\" onclick=\"moveShip('down')\">⬇️</button><button class=\"arrow-btn\" onclick=\"moveShip('right')\">➡️</button></div><p style=\"font-size:0.9em;color:#87CEEB;margin-top:10px\">⌨️ Use Arrow Keys or Click Buttons</p><button class=\"restart-btn\" onclick=\"location.reload()\">🔄 Restart Game</button></div></div><div id=\"gameOver\"><h2 id=\"gameOverTitle\">GAME OVER</h2><p id=\"gameOverMsg\" style=\"font-size:1.3em;margin:20px 0\"></p><p style=\"color:#FFD700;font-size:1.2em;margin:20px 0\">Final Score: <span id=\"finalScore\">0</span></p><button class=\"modal-btn\" onclick=\"playNextLevel()\">Next Level →</button><button class=\"modal-btn\" onclick=\"location.reload()\">Main Menu</button></div><script>let sessionId=null,currentLevel=1;function startGame(d){fetch('/api/start?difficulty='+d).then(r=>r.json()).then(data=>{sessionId=data.sessionId;document.getElementById('menu').style.display='none';document.getElementById('game').classList.add('active');document.getElementById('difficulty').textContent=d;updateGame();setInterval(updateGame,400)}).catch(err=>alert('Error: '+err))}function moveShip(dir){if(!sessionId)return;fetch('/api/move?session='+sessionId+'&direction='+dir).then(r=>r.json()).then(()=>updateGame()).catch(err=>console.error(err))}function updateGame(){if(!sessionId)return;fetch('/api/state?session='+sessionId).then(r=>r.json()).then(data=>{if(data.error)return;renderGrid(data.grid);document.getElementById('status').textContent=data.status;document.getElementById('score').textContent=data.score;document.getElementById('shipX').textContent=data.shipX;document.getElementById('shipY').textContent=data.shipY;document.getElementById('treasureX').textContent=data.treasureX;document.getElementById('treasureY').textContent=data.treasureY;document.getElementById('enemies').textContent=data.enemies||2;document.getElementById('lives').textContent=data.lives||3;if(data.status==='WIN'){currentLevel++;showGameOver('🏆 LEVEL COMPLETE!','You found the treasure!',data.score)}else if(data.status==='LOSE'){showGameOver('☠️ GAME OVER','You were defeated!',data.score)}}).catch(err=>console.error(err))}function showGameOver(title,msg,score){document.getElementById('gameOverTitle').textContent=title;document.getElementById('gameOverMsg').textContent=msg;document.getElementById('finalScore').textContent=score;document.getElementById('gameOver').style.display='block'}function playNextLevel(){document.getElementById('gameOver').style.display='none';fetch('/api/start?difficulty=MEDIUM').then(r=>r.json()).then(data=>{sessionId=data.sessionId;document.getElementById('level').textContent=currentLevel;updateGame();setInterval(updateGame,400)}).catch(err=>alert('Error: '+err))}function renderGrid(grid){const g=document.getElementById('grid');g.innerHTML='';for(let i=0;i<grid.length;i++)for(let j=0;j<grid[i].length;j++){const c=document.createElement('div');c.className='cell';switch(grid[i][j]){case 'S':c.className+=' ship';c.textContent='🚢';break;case 'T':c.className+=' treasure';c.textContent='💰';break;case 'W':c.className+=' island';c.textContent='🏝️';break;case 'E':c.className+=' enemy';c.textContent='👹';break;case 'P':c.className+=' power';c.textContent='⭐';break;default:c.textContent=''}g.appendChild(c)}}document.addEventListener('keydown',(e)=>{if(e.key==='ArrowUp')moveShip('up');if(e.key==='ArrowDown')moveShip('down');if(e.key==='ArrowLeft')moveShip('left');if(e.key==='ArrowRight')moveShip('right')})</script></body></html>";
+    }
+}
+
+/**
+ * ENHANCED WebGameSession - With Multiple Levels, Enemies, Power-ups
+ */
+class WebGameSession {
+    private String difficulty;
+    private int shipX = 1;
+    private int shipY = 1;
+    private int treasureX;
+    private int treasureY;
+    private int score = 0;
+    private int lives = 3;
+    private String status = "PLAYING";
+    private int[][] grid;
+    private int dimension = 20;
+    private List<int[]> enemies = new ArrayList<>();
+    private int moveCounter = 0;
+
+    public WebGameSession(String sessionId, String difficulty) {
+        this.difficulty = difficulty;
+        setLivesByDifficulty();
+        initializeGame();
+    }
+
+    private void setLivesByDifficulty() {
+        switch(difficulty.toUpperCase()) {
+            case "EASY": lives = 5; break;
+            case "MEDIUM": lives = 3; break;
+            case "HARD": lives = 2; break;
+            case "SURVIVAL": lives = 1; break;
+        }
+    }
+
+    private void initializeGame() {
+        grid = new int[dimension][dimension];
+        for (int i = 0; i < dimension; i++) {
+            for (int j = 0; j < dimension; j++) {
+                grid[i][j] = 0;
+            }
+        }
+        
+        // Add islands
+        int islandCount = difficulty.equals("SURVIVAL") ? 20 : difficulty.equals("HARD") ? 15 : 12;
+        for (int i = 0; i < islandCount; i++) {
+            int x = (int)(Math.random() * dimension);
+            int y = (int)(Math.random() * dimension);
+            if (grid[x][y] == 0 && !(x == 1 && y == 1)) {
+                grid[x][y] = 1;
+            }
+        }
+        
+        // Place treasure
+        do {
+            treasureX = (int)(Math.random() * dimension);
+            treasureY = (int)(Math.random() * dimension);
+        } while (grid[treasureX][treasureY] == 1);
+        
+        // Spawn enemies
+        int enemyCount = difficulty.equals("EASY") ? 1 : difficulty.equals("MEDIUM") ? 2 : difficulty.equals("HARD") ? 4 : 5;
+        for (int i = 0; i < enemyCount; i++) {
+            int ex = (int)(Math.random() * dimension);
+            int ey = (int)(Math.random() * dimension);
+            if (grid[ex][ey] == 0 && !(ex == 1 && ey == 1)) {
+                enemies.add(new int[]{ex, ey});
+            }
+        }
+    }
+
+    public void moveShip(String direction) {
+        int newX = shipX;
+        int newY = shipY;
+        
+        switch(direction.toLowerCase()) {
+            case "up": newY = Math.max(0, newY - 1); break;
+            case "down": newY = Math.min(dimension - 1, newY + 1); break;
+            case "left": newX = Math.max(0, newX - 1); break;
+            case "right": newX = Math.min(dimension - 1, newX + 1); break;
+        }
+        
+        if (grid[newY][newX] != 1) {
+            shipX = newX;
+            shipY = newY;
+            score += 10;
+            
+            // Check treasure
+            if (shipX == treasureX && shipY == treasureY) {
+                status = "WIN";
+                score += 1000;
+                return;
+            }
+            
+            // Check enemy collision
+            for (int[] enemy : enemies) {
+                if (shipX == enemy[0] && shipY == enemy[1]) {
+                    lives--;
+                    score -= 50;
+                    if (lives <= 0) {
+                        status = "LOSE";
+                    }
+                    shipX = 1;
+                    shipY = 1;
+                    return;
+                }
+            }
+        }
+        
+        // Move enemies
+        moveCounter++;
+        if (moveCounter % 2 == 0) {
+            for (int[] enemy : enemies) {
+                int dir = (int)(Math.random() * 4);
+                switch(dir) {
+                    case 0: if (enemy[1] > 0) enemy[1]--; break;
+                    case 1: if (enemy[1] < dimension-1) enemy[1]++; break;
+                    case 2: if (enemy[0] > 0) enemy[0]--; break;
+                    case 3: if (enemy[0] < dimension-1) enemy[0]++; break;
+                }
+                
+                // Enemy collision check
+                if (shipX == enemy[0] && shipY == enemy[1]) {
+                    lives--;
+                    score -= 50;
+                    if (lives <= 0) {
+                        status = "LOSE";
+                    }
+                    shipX = 1;
+                    shipY = 1;
+                }
+            }
+        }
+    }
+
+    public String getGameState() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\"grid\":[");
+        for (int i = 0; i < dimension; i++) {
+            sb.append("[");
+            for (int j = 0; j < dimension; j++) {
+                if (i == shipY && j == shipX) sb.append("\"S\"");
+                else if (i == treasureY && j == treasureX) sb.append("\"T\"");
+                else if (grid[i][j] == 1) sb.append("\"W\"");
+                else {
+                    boolean isEnemy = false;
+                    for (int[] enemy : enemies) {
+                        if (i == enemy[1] && j == enemy[0]) {
+                            isEnemy = true;
+                            break;
+                        }
+                    }
+                    sb.append(isEnemy ? "\"E\"" : "\"P\"");
+                }
+                if (j < dimension - 1) sb.append(",");
+            }
+            sb.append("]");
+            if (i < dimension - 1) sb.append(",");
+        }
+        sb.append("],\"status\":\"").append(status).append("\",\"score\":").append(score)
+          .append(",\"shipX\":").append(shipX).append(",\"shipY\":").append(shipY)
+          .append(",\"treasureX\":").append(treasureX).append(",\"treasureY\":").append(treasureY)
+          .append(",\"lives\":").append(lives).append(",\"enemies\":").append(enemies.size()).append("}");
+        return sb.toString();
+    }
+}

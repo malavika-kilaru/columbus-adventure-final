@@ -1,0 +1,198 @@
+package application;
+
+import javafx.geometry.Pos;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.scene.text.Text;
+import javafx.stage.Stage;
+
+/**
+ * GameDifficultyMenu - Menu for selecting game difficulty/mode
+ * 
+ * Allows player to choose:
+ * - EASY: 2 pirates, 1 monster, large grid, slow enemies
+ * - MEDIUM: 3 pirates, 2 monsters, medium grid, normal speed
+ * - HARD: 4 pirates, 3 monsters, small grid, fast enemies
+ * - SURVIVAL: 5 pirates, 4 monsters, tiny grid, very fast enemies
+ * 
+ * @author Student
+ * @version 1.0
+ */
+public class GameDifficultyMenu {
+    private Stage primaryStage;
+    private GameDifficulty selectedDifficulty;
+
+    public enum GameDifficulty {
+        EASY(2, 1, 20, "EASY - Relaxed Adventure"),
+        MEDIUM(3, 2, 15, "MEDIUM - Balanced Challenge"),
+        HARD(4, 3, 12, "HARD - Intense Battle"),
+        SURVIVAL(5, 4, 10, "SURVIVAL - Extreme Mode");
+
+        private int pirateCount;
+        private int monsterCount;
+        private int gridDimension;
+        private String displayName;
+
+        GameDifficulty(int pirateCount, int monsterCount, int gridDimension, String displayName) {
+            this.pirateCount = pirateCount;
+            this.monsterCount = monsterCount;
+            this.gridDimension = gridDimension;
+            this.displayName = displayName;
+        }
+
+        public int getPirateCount() {
+            return pirateCount;
+        }
+
+        public int getMonsterCount() {
+            return monsterCount;
+        }
+
+        public int getGridDimension() {
+            return gridDimension;
+        }
+
+        public String getDisplayName() {
+            return displayName;
+        }
+    }
+
+    /**
+     * Constructor
+     */
+    public GameDifficultyMenu(Stage primaryStage) {
+        this.primaryStage = primaryStage;
+        this.selectedDifficulty = GameDifficulty.MEDIUM; // Default
+    }
+
+    /**
+     * Show the difficulty selection menu
+     */
+    public GameDifficulty showMenu() {
+        VBox root = new VBox(20);
+        root.setStyle("-fx-background-color: linear-gradient(to bottom, #1a1a2e, #16213e);");
+        root.setAlignment(Pos.CENTER);
+        root.setPrefSize(600, 700);
+
+        // Title
+        Text title = new Text("⚓ Christopher Columbus Adventure ⚓");
+        title.setFont(Font.font("Arial", FontWeight.BOLD, 32));
+        title.setFill(Color.GOLD);
+
+        Text subtitle = new Text("Select Your Difficulty Level");
+        subtitle.setFont(Font.font("Arial", FontWeight.BOLD, 18));
+        subtitle.setFill(Color.LIGHTBLUE);
+
+        // Difficulty buttons
+        Button easyBtn = createDifficultyButton(GameDifficulty.EASY, Color.GREEN);
+        Button mediumBtn = createDifficultyButton(GameDifficulty.MEDIUM, Color.ORANGE);
+        Button hardBtn = createDifficultyButton(GameDifficulty.HARD, Color.RED);
+        Button survivalBtn = createDifficultyButton(GameDifficulty.SURVIVAL, Color.CRIMSON);
+
+        // Info text
+        Text infoText = new Text(
+            "EASY: 2 Pirates, 1 Monster - Perfect for beginners\n" +
+            "MEDIUM: 3 Pirates, 2 Monsters - Balanced challenge\n" +
+            "HARD: 4 Pirates, 3 Monsters - For experienced players\n" +
+            "SURVIVAL: 5 Pirates, 4 Monsters - Extreme difficulty!"
+        );
+        infoText.setFont(Font.font("Arial", 12));
+        infoText.setFill(Color.LIGHTYELLOW);
+
+        root.getChildren().addAll(
+            title,
+            subtitle,
+            new Text(""),
+            easyBtn,
+            mediumBtn,
+            hardBtn,
+            survivalBtn,
+            new Text(""),
+            infoText
+        );
+
+        Scene scene = new Scene(root);
+        primaryStage.setScene(scene);
+        primaryStage.setTitle("Christopher Columbus - Game Mode Selection");
+        primaryStage.show();
+
+        // Wait for selection (blocking)
+        synchronized (this) {
+            try {
+                this.wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return selectedDifficulty;
+    }
+
+    /**
+     * Create a difficulty button
+     */
+    private Button createDifficultyButton(GameDifficulty difficulty, Color color) {
+        Button btn = new Button(difficulty.getDisplayName());
+        btn.setStyle(
+            "-fx-font-size: 16; " +
+            "-fx-padding: 15 40 15 40; " +
+            "-fx-background-color: " + toHexString(color) + "; " +
+            "-fx-text-fill: white; " +
+            "-fx-font-weight: bold; " +
+            "-fx-border-radius: 5; " +
+            "-fx-background-radius: 5;"
+        );
+
+        btn.setOnMouseEntered(e -> btn.setStyle(
+            "-fx-font-size: 16; " +
+            "-fx-padding: 15 40 15 40; " +
+            "-fx-background-color: " + toHexString(color.brighter()) + "; " +
+            "-fx-text-fill: white; " +
+            "-fx-font-weight: bold; " +
+            "-fx-border-radius: 5; " +
+            "-fx-background-radius: 5; " +
+            "-fx-cursor: hand;"
+        ));
+
+        btn.setOnMouseExited(e -> btn.setStyle(
+            "-fx-font-size: 16; " +
+            "-fx-padding: 15 40 15 40; " +
+            "-fx-background-color: " + toHexString(color) + "; " +
+            "-fx-text-fill: white; " +
+            "-fx-font-weight: bold; " +
+            "-fx-border-radius: 5; " +
+            "-fx-background-radius: 5;"
+        ));
+
+        btn.setOnAction(e -> {
+            selectedDifficulty = difficulty;
+            synchronized (this) {
+                this.notify();
+            }
+        });
+
+        return btn;
+    }
+
+    /**
+     * Convert Color to hex string
+     */
+    private String toHexString(Color color) {
+        return String.format("#%02X%02X%02X",
+            (int) (color.getRed() * 255),
+            (int) (color.getGreen() * 255),
+            (int) (color.getBlue() * 255)
+        );
+    }
+
+    /**
+     * Get selected difficulty
+     */
+    public GameDifficulty getSelectedDifficulty() {
+        return selectedDifficulty;
+    }
+}

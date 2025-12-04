@@ -1,0 +1,220 @@
+package application;
+
+import java.awt.Point;
+import java.util.ArrayList;
+import java.util.List;
+
+public class GameControllerV2 {
+    private Ship ship;
+    private Treasure treasure;
+    private List<PirateShip> pirates;
+    private List<SeaMonster> monsters;
+    private List<PowerUp> powerUps;
+    private OceanMap oceanMap;
+    private GameState currentState;
+    private int score;
+    private int lives;
+    private String difficulty;
+    private int shieldActive = 0;
+    private int speedActive = 0;
+    private int radarActive = 0;
+    private int turnCounter = 0;
+
+    public GameControllerV2(Ship ship, Treasure treasure, OceanMap oceanMap, String difficulty) {
+        this.ship = ship;
+        this.treasure = treasure;
+        this.oceanMap = oceanMap;
+        this.difficulty = difficulty;
+        this.pirates = new ArrayList<>();
+        this.monsters = new ArrayList<>();
+        this.powerUps = new ArrayList<>();
+        this.currentState = GameState.PLAYING;
+        this.score = 0;
+        this.turnCounter = 0;
+        
+        setDifficultyStats();
+        generatePowerUps();
+    }
+
+    private void setDifficultyStats() {
+        switch(difficulty.toUpperCase()) {
+            case "EASY":
+                this.lives = 5;
+                System.out.println("🟢 EASY MODE: You have " + lives + " LIVES");
+                break;
+            case "MEDIUM":
+                this.lives = 3;
+                System.out.println("🟠 MEDIUM MODE: You have " + lives + " LIVES");
+                break;
+            case "HARD":
+                this.lives = 2;
+                System.out.println("🔴 HARD MODE: You have " + lives + " LIVES");
+                break;
+            case "SURVIVAL":
+                this.lives = 1;
+                System.out.println("💀 SURVIVAL MODE: You have " + lives + " LIFE");
+                break;
+        }
+    }
+
+    private void generatePowerUps() {
+        int powerUpCount = 0;
+        
+        switch(difficulty.toUpperCase()) {
+            case "EASY":
+                powerUpCount = 8;
+                break;
+            case "MEDIUM":
+                powerUpCount = 4;
+                break;
+            case "HARD":
+                powerUpCount = 2;
+                break;
+            case "SURVIVAL":
+                powerUpCount = 0;
+                break;
+        }
+        
+        for (int i = 0; i < powerUpCount; i++) {
+            int x = (int)(Math.random() * (oceanMap.getMap().length - 2)) + 1;
+            int y = (int)(Math.random() * (oceanMap.getMap()[0].length - 2)) + 1;
+            
+            if (!oceanMap.isIsland(x, y)) {
+                PowerUp.PowerUpType[] types = PowerUp.PowerUpType.values();
+                PowerUp.PowerUpType type = types[(int)(Math.random() * types.length)];
+                powerUps.add(new PowerUp(x, y, type));
+            }
+        }
+    }
+
+    public void addPirate(PirateAI pirate) {
+        pirates.add(pirate);
+    }
+
+    public void addMonster(SeaMonster monster) {
+        monsters.add(monster);
+    }
+
+    public void update() {
+        if (currentState != GameState.PLAYING) return;
+        
+        turnCounter++;
+        
+        
+        
+        for (SeaMonster monster : monsters) {
+            monster.move();
+        }
+        
+        for (PowerUp pu : powerUps) {
+            if (pu.isActive()) {
+                pu.updateTimer();
+            }
+        }
+        
+        if (shieldActive > 0) shieldActive--;
+        if (speedActive > 0) speedActive--;
+        if (radarActive > 0) radarActive--;
+        
+        checkPowerUpCollection();
+        checkCollisions();
+        checkWinCondition();
+    }
+
+    private void checkPowerUpCollection() {
+        Point shipLoc = ship.getShipLocation();
+        
+        for (PowerUp pu : powerUps) {
+            if (pu.isActive() && pu.isAt((int)shipLoc.x, (int)shipLoc.y)) {
+                collectPowerUp(pu);
+                pu.collect();
+            }
+        }
+    }
+
+    private void collectPowerUp(PowerUp pu) {
+        switch(pu.getType()) {
+            case SHIELD:
+                shieldActive = 5;
+                System.out.println("🛡️ SHIELD ACTIVATED!");
+                score += 100;
+                break;
+            case SPEED:
+                speedActive = 5;
+                System.out.println("⚡ SPEED BOOST!");
+                score += 100;
+                break;
+            case HEALTH:
+                if (lives < 5) {
+                    lives++;
+                    System.out.println("❤️ HEALTH RECOVERED! Lives: " + lives);
+                    score += 150;
+                }
+                break;
+            case RADAR:
+                radarActive = 10;
+                System.out.println("🎯 RADAR ACTIVE!");
+                score += 200;
+                break;
+        }
+    }
+
+    private void checkCollisions() {
+        Point shipLoc = ship.getShipLocation();
+        
+        for (PirateAI pirate : pirates) {
+            if (pirate.getLocation().equals(shipLoc)) {
+                if (shieldActive > 0) {
+                    System.out.println("⚔️ PIRATE ATTACKED! Shield protected you!");
+                    shieldActive = 0;
+                    score -= 50;
+                } else {
+                    loseLife();
+                }
+                return;
+            }
+        }
+        
+        for (SeaMonster monster : monsters) {
+            if (monster.collidesWith((int)shipLoc.x, (int)shipLoc.y)) {
+                if (shieldActive > 0) {
+                    System.out.println("👹 MONSTER ATTACKED! Shield protected you!");
+                    shieldActive = 0;
+                    score -= 50;
+                } else {
+                    loseLife();
+                }
+                return;
+            }
+        }
+    }
+
+    private void loseLife() {
+        lives--;
+        System.out.println("💥 HIT! Lives remaining: " + lives);
+        
+        if (lives <= 0) {
+            currentState = GameState.LOSE;
+            System.out.println("☠️ GAME OVER!");
+        }
+    }
+
+    public void checkWinCondition() {
+        Point shipLoc = ship.getShipLocation();
+        if (treasure.isAt((int)shipLoc.x, (int)shipLoc.y)) {
+            currentState = GameState.WIN;
+            score += 1000;
+            System.out.println("🏆 TREASURE FOUND!");
+        }
+    }
+
+    public GameState getCurrentState() { return currentState; }
+    public void setGameState(GameState state) { this.currentState = state; }
+    public int getScore() { return score; }
+    public int getLives() { return lives; }
+    public boolean hasShield() { return shieldActive > 0; }
+    public boolean hasSpeed() { return speedActive > 0; }
+    public boolean hasRadar() { return radarActive > 0; }
+    public List<PowerUp> getPowerUps() { return powerUps; }
+    public List<PirateAI> getPirates() { return pirates; }
+}
